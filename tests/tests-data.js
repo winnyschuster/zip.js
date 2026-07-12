@@ -70,6 +70,7 @@ export default ([
 	{ title: "Pass through zipcrypto", script: "./test-passthrough-zipcrypto.js" },
 	{ title: "Pass through zstd", script: "./test-passthrough-zstd.js" },
 	{ title: "Prepended data with zip64 offsets", script: "./test-prepended-data-zip64.js" },
+	{ title: "Zip64 offset boundaries", script: "./test-zip64-offset-boundary.js" },
 	{ title: "Worker loading error", script: "./test-worker-error.js" },
 	{ title: "Props", script: "./test-props.js" },
 	{ title: "Readable Stream", script: "./test-readable-stream.js" },
