@@ -45,6 +45,7 @@ export default ([
 	{ title: "Filesystem HTTP import", script: "./test-fs-http-import.js" },
 	{ title: "Filesystem import edge cases", script: "./test-fs-import-edge-cases.js" },
 	{ title: "Filesystem remove", script: "./test-fs-remove.js" },
+	{ title: "Filesystem deep tree", script: "./test-fs-deep-tree.js" },
 	{ title: "Filesystem HTTP reader", script: "./test-fs-http-reader.js" },
 	{ title: "Filesystem metadata", script: "./test-fs-metadata.js" },
 	{ title: "Filesystem passthrough", script: "./test-fs-passthrough.js" },

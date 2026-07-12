@@ -6553,7 +6553,9 @@
 			while (removedEntries.length) {
 				const removedEntry = removedEntries.pop();
 				this.entries[removedEntry.id] = null;
-				removedEntries.push(...removedEntry.children);
+				for (const child of removedEntry.children) {
+					removedEntries.push(child);
+				}
 			}
 			entry.parent = UNDEFINED_VALUE;
 		}
@@ -6700,15 +6702,15 @@
 
 	function getTotalSize(entries, propertyName) {
 		let size = 0;
-		entries.forEach(process);
-		return size;
-
-		function process(entry) {
+		const pendingEntries = Array.from(entries);
+		while (pendingEntries.length) {
+			const entry = pendingEntries.pop();
 			size += entry[propertyName];
-			if (entry.children) {
-				entry.children.forEach(process);
+			for (const child of entry.children) {
+				pendingEntries.push(child);
 			}
 		}
+		return size;
 	}
 
 	function getZipBlobReader(options) {
@@ -6736,29 +6738,35 @@
 	}
 
 	async function initReaders(entry, options) {
-		if (entry.children.length) {
-			await Promise.all(entry.children.map(async child => {
+		const fileEntries = [];
+		const pendingEntries = [entry];
+		while (pendingEntries.length) {
+			const pendingEntry = pendingEntries.pop();
+			for (const child of pendingEntry.children) {
 				if (child.directory) {
-					await initReaders(child, options);
+					pendingEntries.push(child);
 				} else {
-					const reader = child.reader = new child.Reader(child.data, options);
-					try {
-						await initStream(reader);
-					} catch (error) {
-						try {
-							error.entryId = child.id;
-							error.cause = {
-								entry: child
-							};
-						} catch {
-							// ignored
-						}
-						throw error;
-					}
-					child.uncompressedSize = reader.size;
+					fileEntries.push(child);
 				}
-			}));
+			}
 		}
+		await Promise.all(fileEntries.map(async child => {
+			const reader = child.reader = new child.Reader(child.data, options);
+			try {
+				await initStream(reader);
+			} catch (error) {
+				try {
+					error.entryId = child.id;
+					error.cause = {
+						entry: child
+					};
+				} catch {
+					// ignored
+				}
+				throw error;
+			}
+			child.uncompressedSize = reader.size;
+		}));
 	}
 
 	function detach(entry) {
