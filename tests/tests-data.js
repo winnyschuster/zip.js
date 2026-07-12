@@ -24,6 +24,7 @@ export default ([
 	{ title: "Custom IO classes", script: "./test-custom-io.js" },
 	{ title: "Custom temp stream", script: "./test-custom-temp-buffer.js" },
 	{ title: "Custom temp stream (concurrent add)", script: "./test-concurrent-add-temp-stream.js" },
+	{ title: "Keep order (concurrent add)", script: "./test-keep-order-concurrent.js" },
 	{ title: "Data descriptor signature", script: "./test-data-descriptor-signature.js" },
 	{ title: "Data descriptor", script: "./test-data-descriptor.js" },
 	{ title: "Data URI", script: "./test-data-uri.js" },
