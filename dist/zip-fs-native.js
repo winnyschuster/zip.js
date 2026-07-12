@@ -5512,6 +5512,12 @@
 		let rawLocalExtraFieldZip64;
 		const uncompressedFile = passThrough || !compressed;
 		const zip64ExtraFieldComplete = zip64 && (options.bufferedWrite || ((!zip64UncompressedSize && !zip64CompressedSize) || uncompressedFile));
+		// The local zip64 extra field must be present whenever the entry uses 8-byte size fields:
+		// per APPNOTE 4.3.9.2 its presence is what tells a streaming reader that the data descriptor
+		// holds 8-byte (rather than 4-byte) sizes. When the sizes aren't known yet (streaming with a
+		// data descriptor) the field is still written with its size slots left as zero; the real
+		// values are then written in the data descriptor and the central directory.
+		const writeLocalExtraFieldZip64 = zip64ExtraFieldComplete || (zip64 && dataDescriptor && (zip64UncompressedSize || zip64CompressedSize));
 		if (zip64) {
 			const length = 4 + (zip64UncompressedSize ? 8 : 0) + (zip64CompressedSize ? 8 : 0);
 			const extraFieldZip64 = createRecordWriter(length);
@@ -5631,7 +5637,7 @@
 			rawExtraFieldAES[9] = compressionMethod;
 			compressionMethod = COMPRESSION_METHOD_AES;
 		}
-		const localExtraFieldZip64Length = zip64ExtraFieldComplete ? getLength(rawLocalExtraFieldZip64) : 0;
+		const localExtraFieldZip64Length = writeLocalExtraFieldZip64 ? getLength(rawLocalExtraFieldZip64) : 0;
 		const extraFieldLength = localExtraFieldZip64Length + getLength(rawExtraFieldAES, rawExtraFieldExtendedTimestamp, rawExtraFieldNTFS, rawExtraFieldUnix, rawExtraField);
 		const {
 			headerArray,
@@ -5654,7 +5660,7 @@
 		localHeader.uint32(LOCAL_FILE_HEADER_SIGNATURE);
 		localHeader.bytes(headerArray);
 		localHeader.bytes(rawFilename);
-		if (zip64ExtraFieldComplete) {
+		if (writeLocalExtraFieldZip64) {
 			localHeader.bytes(rawLocalExtraFieldZip64);
 		}
 		localHeader.bytes(rawExtraFieldAES);
@@ -5663,8 +5669,16 @@
 		localHeader.bytes(rawExtraFieldUnix);
 		localHeader.bytes(rawExtraField);
 		if (dataDescriptor) {
-			setUint32(localHeaderView, HEADER_OFFSET_COMPRESSED_SIZE + LOCAL_HEADER_COMMON_OFFSET, 0);
-			setUint32(localHeaderView, HEADER_OFFSET_UNCOMPRESSED_SIZE + LOCAL_HEADER_COMMON_OFFSET, 0);
+			// With a data descriptor the sizes live in the descriptor; the local header fields are
+			// zeroed - except for zip64 sizes, which stay as the 0xFFFFFFFF sentinel so the local
+			// zip64 extra field remains valid (APPNOTE 4.5.3: a zip64 sub-field is only present when
+			// its 32-bit field holds the sentinel).
+			if (!zip64CompressedSize) {
+				setUint32(localHeaderView, HEADER_OFFSET_COMPRESSED_SIZE + LOCAL_HEADER_COMMON_OFFSET, 0);
+			}
+			if (!zip64UncompressedSize) {
+				setUint32(localHeaderView, HEADER_OFFSET_UNCOMPRESSED_SIZE + LOCAL_HEADER_COMMON_OFFSET, 0);
+			}
 		}
 		return {
 			localHeaderArray,
