@@ -38,6 +38,7 @@ export default ([
 	{ title: "Filesystem export", script: "./test-fs-export-options.js" },
 	{ title: "Filesystem export error", script: "./test-fs-export-error.js" },
 	{ title: "Filesystem HTTP import", script: "./test-fs-http-import.js" },
+	{ title: "Filesystem import edge cases", script: "./test-fs-import-edge-cases.js" },
 	{ title: "Filesystem HTTP reader", script: "./test-fs-http-reader.js" },
 	{ title: "Filesystem metadata", script: "./test-fs-metadata.js" },
 	{ title: "Filesystem passthrough", script: "./test-fs-passthrough.js" },
