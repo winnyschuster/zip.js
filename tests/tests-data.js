@@ -24,6 +24,7 @@ export default ([
 	{ title: "Executable", script: "./test-executable.js" },
 	{ title: "Duplicated Filename", script: "./test-duplicated-filename.js" },
 	{ title: "Empty zip file", script: "./test-empty.js" },
+	{ title: "Entry count from total field", script: "./test-entry-count-total.js" },
 	{ title: "Extended timestamp", script: "./test-extended-timestamp.js" },
 	{ title: "Extra field", script: "./test-extra-field.js" },
 	{ title: "Filesystem base 64", script: "./test-fs-base64.js" },
