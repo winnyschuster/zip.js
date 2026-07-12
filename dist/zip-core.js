@@ -2008,6 +2008,9 @@
 					});
 				},
 				onTaskFinished() {
+					if (!workerData.busy) {
+						return;
+					}
 					const { resolveTerminated } = workerData;
 					if (resolveTerminated) {
 						workerData.resolveTerminated = null;
@@ -2140,13 +2143,19 @@
 		});
 		const { readable, options } = workerData;
 		const { writable, closed } = watchClosedStream(workerData.writable);
-		const streamsTransferred = sendMessage({
-			type: MESSAGE_START,
-			options,
-			config,
-			readable,
-			writable
-		}, workerData);
+		let streamsTransferred;
+		try {
+			streamsTransferred = sendMessage({
+				type: MESSAGE_START,
+				options,
+				config,
+				readable,
+				writable
+			}, workerData);
+		} catch (error) {
+			workerData.onTaskFinished();
+			throw error;
+		}
 		if (!streamsTransferred) {
 			Object.assign(workerData, {
 				reader: readable.getReader(),
@@ -2171,6 +2180,18 @@
 		const { writable, readable } = new TransformStream();
 		const closed = readable.pipeTo(writableSource, { preventClose: true });
 		return { writable, closed };
+	}
+
+	function terminateWorker$1(workerData) {
+		const { worker } = workerData;
+		if (worker) {
+			try {
+				worker.terminate();
+			} catch {
+				// ignored
+			}
+		}
+		workerData.interface = null;
 	}
 
 	function getWebWorker(url, baseURI, workerData, isModuleType, useBlobURI = true) {
@@ -2275,7 +2296,6 @@
 			if (writer) {
 				writer.releaseLock();
 			}
-			onTaskFinished();
 			throw error;
 		}
 	}
@@ -2304,7 +2324,9 @@
 				}
 			}
 		} catch (error) {
-			sendMessage({ type: MESSAGE_CLOSE, messageId }, workerData);
+			// the worker pipeline is in an unrecoverable state and may still post messages
+			// that would be misattributed to the next task reusing this worker; terminate it
+			terminateWorker$1(workerData);
 			close(error);
 		}
 
@@ -5060,14 +5082,14 @@
 				requestLockCurrentFileEntry();
 			}
 			if ((options.bufferedWrite || !keepOrder || zipWriter.writerLocked || zipWriter.bufferedWrites || !dataDescriptor) && !usdz) {
+				bufferedWrite = true;
+				zipWriter.bufferedWrites++;
 				if (options.createTempStream) {
 					fileWriter = await options.createTempStream();
 				} else {
 					fileWriter = new TransformStream(UNDEFINED_VALUE, UNDEFINED_VALUE, { highWaterMark: INFINITY_VALUE });
 				}
 				fileWriter.size = 0;
-				bufferedWrite = true;
-				zipWriter.bufferedWrites++;
 				await initStream(writer);
 			} else {
 				fileWriter = writer;
