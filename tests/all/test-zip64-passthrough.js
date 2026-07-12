@@ -1,4 +1,4 @@
-/* global Blob */
+/* global Blob, Uint8Array, DataView */
 
 import * as zip from "../../index.js";
 
@@ -10,10 +10,11 @@ export { test };
 
 async function test() {
 	zip.configure({ chunkSize: 128, useWebWorkers: true });
+	// a compressed zip64 entry written with a data descriptor
 	let blobWriter = new zip.BlobWriter("application/zip");
 	let zipWriter = new zip.ZipWriter(blobWriter);
 	await zipWriter.add(FILENAME, new zip.BlobReader(BLOB), { zip64: true });
-	const zipWithNoLocalZip64ExtraField = await zipWriter.close();
+	const compressedZip64Blob = await zipWriter.close();
 	let zipReader = new zip.ZipReader(new zip.BlobReader(await blobWriter.getData()));
 	let entries = await zipReader.getEntries();
 	let data = await entries[0].getData(new zip.BlobWriter(), { passThrough: true });
@@ -21,18 +22,41 @@ async function test() {
 	if (data.size != entries[0].compressedSize) {
 		throw new Error();
 	}
+	// re-wrap the already-compressed data as a zip64 passThrough entry
 	const signature = entries[0].signature;
 	const uncompressedSize = TEXT_CONTENT.length;
 	blobWriter = new zip.BlobWriter("application/zip");
 	zipWriter = new zip.ZipWriter(blobWriter);
 	await zipWriter.add(FILENAME, new zip.BlobReader(data), { zip64: true, passThrough: true, uncompressedSize, signature });
-	const zipWithLocalZip64ExtraField = await zipWriter.close();
+	const passThroughZip64Blob = await zipWriter.close();
 	zipReader = new zip.ZipReader(new zip.BlobReader(await blobWriter.getData()));
 	entries = await zipReader.getEntries();
 	data = await entries[0].getData(new zip.TextWriter(), { checkSignature: true });
 	await zipReader.close();
 	await zip.terminateWorkers();
-	if (data != TEXT_CONTENT || zipWithLocalZip64ExtraField.size <= zipWithNoLocalZip64ExtraField.size) {
+	// the passThrough round-trip must reproduce the original content, and both zip64 entries
+	// must carry the local zip64 extra field so streaming readers can size the 8-byte data
+	// descriptor (APPNOTE 4.3.9.2)
+	if (data != TEXT_CONTENT ||
+		!await hasLocalZip64ExtraField(compressedZip64Blob) ||
+		!await hasLocalZip64ExtraField(passThroughZip64Blob)) {
 		throw new Error();
 	}
+}
+
+// scan the first local file header's extra fields for the zip64 tag (0x0001)
+async function hasLocalZip64ExtraField(blob) {
+	const bytes = new Uint8Array(await blob.arrayBuffer());
+	const view = new DataView(bytes.buffer);
+	const filenameLength = view.getUint16(26, true);
+	const extraFieldLength = view.getUint16(28, true);
+	let offset = 30 + filenameLength;
+	const extraFieldEnd = offset + extraFieldLength;
+	while (offset + 4 <= extraFieldEnd) {
+		if (view.getUint16(offset, true) == 0x0001) {
+			return true;
+		}
+		offset += 4 + view.getUint16(offset + 2, true);
+	}
+	return false;
 }
