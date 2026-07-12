@@ -1,0 +1,65 @@
+import * as zip from "../../index.js";
+
+const CONTENTS = ["alpha-content", "beta-content!"];
+const EXTRA_DATA_LENGTH = 64;
+
+export { test };
+
+async function test() {
+	zip.configure({ useWebWorkers: true });
+	try {
+		const blobWriter = new zip.BlobWriter("application/zip");
+		const zipWriter = new zip.ZipWriter(blobWriter, { level: 0, dataDescriptor: false });
+		for (let indexContent = 0; indexContent < CONTENTS.length; indexContent++) {
+			await zipWriter.add("file" + indexContent + ".txt", new zip.TextReader(CONTENTS[indexContent]));
+		}
+		await zipWriter.close();
+		const array = new Uint8Array(await (await blobWriter.getData()).arrayBuffer());
+		// a clean archive is not ambiguous
+		await readEntries(array);
+		// appended data must be rejected
+		const appendedArray = new Uint8Array(array.length + EXTRA_DATA_LENGTH);
+		appendedArray.set(array);
+		appendedArray.fill(0x5a, array.length);
+		await expectAmbiguous(appendedArray, "appended data");
+		// prepended data must be rejected
+		const prependedArray = new Uint8Array(EXTRA_DATA_LENGTH + array.length);
+		prependedArray.fill(0x5a, 0, EXTRA_DATA_LENGTH);
+		prependedArray.set(array, EXTRA_DATA_LENGTH);
+		await expectAmbiguous(prependedArray, "prepended data");
+	} finally {
+		await zip.terminateWorkers();
+	}
+}
+
+async function readEntries(array) {
+	const zipReader = new zip.ZipReader(new zip.Uint8ArrayReader(array), { checkAmbiguity: true });
+	try {
+		const entries = await zipReader.getEntries();
+		if (entries.length != CONTENTS.length) {
+			throw new Error();
+		}
+		for (let indexEntry = 0; indexEntry < entries.length; indexEntry++) {
+			const data = await entries[indexEntry].getData(new zip.TextWriter());
+			if (data != CONTENTS[indexEntry]) {
+				throw new Error();
+			}
+		}
+	} finally {
+		await zipReader.close();
+	}
+}
+
+async function expectAmbiguous(array, reason) {
+	const zipReader = new zip.ZipReader(new zip.Uint8ArrayReader(array), { checkAmbiguity: true });
+	try {
+		await zipReader.getEntries();
+		throw new Error();
+	} catch (error) {
+		if (error.message != zip.ERR_AMBIGUOUS_ARCHIVE || error.reason != reason) {
+			throw error;
+		}
+	} finally {
+		await zipReader.close();
+	}
+}

@@ -842,6 +842,14 @@ export interface GetEntriesOptions {
    * @returns The decoded text value or `undefined` if the raw text value should be decoded by zip.js.
    */
   decodeText?(value: Uint8Array, encoding: string): string | undefined;
+  /**
+   * `true` to throw an {@link ERR_AMBIGUOUS_ARCHIVE} error when the archive contains data before or after the zip
+   * structure (e.g. a self-extracting archive stub or a concatenated archive). This rejects archives that could be
+   * parsed differently by other tools.
+   *
+   * @defaultValue false
+   */
+  checkAmbiguity?: boolean;
 }
 
 /**
@@ -2345,6 +2353,12 @@ export const ERR_SPLIT_ZIP_FILE: string;
  * Overlapping entry error
  */
 export const ERR_OVERLAPPING_ENTRY: string;
+/**
+ * Ambiguous archive error
+ *
+ * @remarks The thrown error carries a `reason` property (e.g. `"appended data"` or `"prepended data"`) describing the ambiguity.
+ */
+export const ERR_AMBIGUOUS_ARCHIVE: string;
 /**
  * Iteration completed too soon error
  */

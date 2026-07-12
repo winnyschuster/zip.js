@@ -5,6 +5,7 @@ export default ([
 	{ title: "Uint8Array", script: "./test-array.js" },
 	{ title: "Arraybuffer", script: "./test-arrayBuffer.js" },
 	{ title: "Base 64", script: "./test-base64.js" },
+	{ title: "Ambiguity check", script: "./test-check-ambiguity.js" },
 	{ title: "Blob", script: "./test-blob.js" },
 	{ title: "Comments", script: "./test-comments.js" },
 	{ title: "Common JS", script: "./test-common-js.cjs", env: ["node"] },
