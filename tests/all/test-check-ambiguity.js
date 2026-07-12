@@ -27,6 +27,13 @@ async function test() {
 		prependedArray.fill(0x5a, 0, EXTRA_DATA_LENGTH);
 		prependedArray.set(array, EXTRA_DATA_LENGTH);
 		await expectAmbiguous(prependedArray, "prepended data");
+		// a forged entry count that hides trailing central directory records must be rejected
+		const hiddenRecordArray = array.slice();
+		const hiddenRecordView = new DataView(hiddenRecordArray.buffer);
+		const endOfDirectoryOffset = hiddenRecordArray.length - 22;
+		hiddenRecordView.setUint16(endOfDirectoryOffset + 8, CONTENTS.length - 1, true);
+		hiddenRecordView.setUint16(endOfDirectoryOffset + 10, CONTENTS.length - 1, true);
+		await expectAmbiguous(hiddenRecordArray, "trailing central directory data");
 	} finally {
 		await zip.terminateWorkers();
 	}
