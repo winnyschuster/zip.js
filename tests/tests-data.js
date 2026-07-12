@@ -69,6 +69,7 @@ export default ([
 	{ title: "Split data", script: "./test-split-data.js" },
 	{ title: "Split zip file", script: "./test-split-zip.js" },
 	{ title: "Split zip file (segment boundaries)", script: "./test-split-zip-boundaries.js" },
+	{ title: "Golden output", script: "./test-golden-output.js" },
 	{ title: "Store", script: "./test-store.js" },
 	{ title: "Streams", script: "./test-streams.js" },
 	{ title: "Text encoding ", script: "./test-text-encoding.js" },
