@@ -843,9 +843,10 @@ export interface GetEntriesOptions {
    */
   decodeText?(value: Uint8Array, encoding: string): string | undefined;
   /**
-   * `true` to throw an {@link ERR_AMBIGUOUS_ARCHIVE} error when the archive contains data before or after the zip
-   * structure (e.g. a self-extracting archive stub or a concatenated archive). This rejects archives that could be
-   * parsed differently by other tools.
+   * `true` to throw an {@link ERR_AMBIGUOUS_ARCHIVE} error when the archive could be parsed differently by other
+   * tools. This detects data before or after the zip structure (e.g. a self-extracting archive stub or a
+   * concatenated archive), central directory records not accounted for by the end of central directory record, an
+   * end of central directory record disagreeing with its zip64 counterpart, and duplicate filenames.
    *
    * @defaultValue false
    */
@@ -2356,7 +2357,7 @@ export const ERR_OVERLAPPING_ENTRY: string;
 /**
  * Ambiguous archive error
  *
- * @remarks The thrown error carries a `reason` property (e.g. `"appended data"` or `"prepended data"`) describing the ambiguity.
+ * @remarks The thrown error carries a `reason` property describing the ambiguity: `"appended data"`, `"prepended data"`, `"trailing central directory data"`, `"mismatched zip64 end of central directory record"`, or `"duplicate filename"`.
  */
 export const ERR_AMBIGUOUS_ARCHIVE: string;
 /**

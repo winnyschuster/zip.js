@@ -49,6 +49,18 @@ async function test() {
 		mismatchedView.setUint16(mismatchedEndOfDirectoryOffset + 8, CONTENTS.length - 1, true);
 		mismatchedView.setUint16(mismatchedEndOfDirectoryOffset + 10, CONTENTS.length - 1, true);
 		await expectAmbiguous(mismatchedArray, "mismatched zip64 end of central directory record");
+		// two central directory records sharing a filename must be rejected
+		const duplicateArray = array.slice();
+		const duplicateView = new DataView(duplicateArray.buffer);
+		const duplicateDirectoryOffset = duplicateView.getUint32(duplicateArray.length - 22 + 16, true);
+		const firstRecordNameOffset = duplicateDirectoryOffset + 46;
+		const firstRecordNameLength = duplicateView.getUint16(duplicateDirectoryOffset + 28, true);
+		const firstRecordName = duplicateArray.subarray(firstRecordNameOffset, firstRecordNameOffset + firstRecordNameLength);
+		let secondRecordOffset = duplicateDirectoryOffset + 46 + firstRecordNameLength +
+			duplicateView.getUint16(duplicateDirectoryOffset + 30, true) + duplicateView.getUint16(duplicateDirectoryOffset + 32, true);
+		// overwrite the second record filename with the first one (both names have the same length here)
+		duplicateArray.set(firstRecordName, secondRecordOffset + 46);
+		await expectAmbiguous(duplicateArray, "duplicate filename");
 	} finally {
 		await zip.terminateWorkers();
 	}
