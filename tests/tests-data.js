@@ -33,6 +33,7 @@ export default ([
 	{ title: "Filesystem base 64", script: "./test-fs-base64.js" },
 	{ title: "Filesystem check password", script: "./test-fs-check-password.js" },
 	{ title: "Filesystem export", script: "./test-fs-export-options.js" },
+	{ title: "Filesystem export error", script: "./test-fs-export-error.js" },
 	{ title: "Filesystem HTTP import", script: "./test-fs-http-import.js" },
 	{ title: "Filesystem HTTP reader", script: "./test-fs-http-reader.js" },
 	{ title: "Filesystem metadata", script: "./test-fs-metadata.js" },
