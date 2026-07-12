@@ -17,9 +17,17 @@ async function test() {
 		zipFs = new zip.fs.FS();
 		await zipFs.importBlob(blob);
 		if (zipFs.isPasswordProtected()) {
-			result = await zipFs.checkPassword("notagoodpassword");
+			// checkPassword must not mutate the caller-supplied options object
+			const options = {};
+			result = await zipFs.checkPassword("notagoodpassword", options);
+			if (Object.keys(options).length) {
+				throw new Error("checkPassword mutated the options object");
+			}
 			if (!result) {
-				result = await zipFs.checkPassword("password");
+				result = await zipFs.checkPassword("password", options);
+				if (Object.keys(options).length) {
+					throw new Error("checkPassword mutated the options object");
+				}
 			} else {
 				throw new Error();
 			}
