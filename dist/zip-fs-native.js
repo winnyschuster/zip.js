@@ -6759,7 +6759,7 @@
 			return importedEntries;
 		}
 
-		async exportZip(writer, options) {
+		async exportZip(writer, options = {}) {
 			const zipEntry = this;
 			if (options.bufferedWrite === UNDEFINED_VALUE) {
 				options.bufferedWrite = true;
@@ -6950,6 +6950,10 @@
 
 		exportWritable(writable, options) {
 			return this.root.exportWritable(writable, options);
+		}
+
+		exportZip(writer, options) {
+			return this.root.exportZip(writer, options);
 		}
 
 		isPasswordProtected() {

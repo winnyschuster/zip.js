@@ -42,6 +42,7 @@ export default ([
 	{ title: "Filesystem check password", script: "./test-fs-check-password.js" },
 	{ title: "Filesystem export", script: "./test-fs-export-options.js" },
 	{ title: "Filesystem export error", script: "./test-fs-export-error.js" },
+	{ title: "Filesystem export zip", script: "./test-fs-export-zip.js" },
 	{ title: "Filesystem HTTP import", script: "./test-fs-http-import.js" },
 	{ title: "Filesystem import edge cases", script: "./test-fs-import-edge-cases.js" },
 	{ title: "Filesystem remove", script: "./test-fs-remove.js" },
