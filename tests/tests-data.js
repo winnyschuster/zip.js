@@ -27,6 +27,7 @@ export default ([
 	{ title: "Entry count from total field", script: "./test-entry-count-total.js" },
 	{ title: "Extended timestamp", script: "./test-extended-timestamp.js" },
 	{ title: "Extra field", script: "./test-extra-field.js" },
+	{ title: "Last access date and creation date", script: "./test-last-access-date.js" },
 	{ title: "Filesystem base 64", script: "./test-fs-base64.js" },
 	{ title: "Filesystem check password", script: "./test-fs-check-password.js" },
 	{ title: "Filesystem export", script: "./test-fs-export-options.js" },
