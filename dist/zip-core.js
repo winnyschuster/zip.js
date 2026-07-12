@@ -1411,11 +1411,11 @@
 			hmac,
 			pending
 		} = aesCrypto;
-		const inputLength = input.length - paddingEnd;
 		if (pending.length) {
 			input = concat(pending, input);
-			output = expand(output, inputLength - (inputLength % BLOCK_LENGTH));
 		}
+		const inputLength = input.length - paddingEnd;
+		output = expand(output, paddingStart + (inputLength - (inputLength % BLOCK_LENGTH)));
 		let offset;
 		for (offset = 0; offset <= inputLength - BLOCK_LENGTH; offset += BLOCK_LENGTH) {
 			const inputChunk = toBits(codecBytes, subarray(input, offset, offset + BLOCK_LENGTH));
@@ -1563,20 +1563,21 @@
 
 	class ZipCryptoDecryptionStream extends TransformStream {
 
-		constructor({ password, passwordVerification, checkPasswordOnly }) {
+		constructor({ password, rawPassword, passwordVerification, checkPasswordOnly }) {
 			super({
 				start() {
 					Object.assign(this, {
 						password,
+						rawPassword,
 						passwordVerification
 					});
-					createKeys(this, password);
+					createKeys(this, password, rawPassword);
 				},
 				transform(chunk, controller) {
 					const zipCrypto = this;
-					if (zipCrypto.password) {
+					if (zipCrypto.password || zipCrypto.rawPassword) {
 						const decryptedHeader = decrypt(zipCrypto, chunk.subarray(0, HEADER_LENGTH));
-						zipCrypto.password = null;
+						zipCrypto.password = zipCrypto.rawPassword = null;
 						if (decryptedHeader.at(-1) != zipCrypto.passwordVerification) {
 							throw new Error(ERR_INVALID_PASSWORD);
 						}
@@ -1594,21 +1595,22 @@
 
 	class ZipCryptoEncryptionStream extends TransformStream {
 
-		constructor({ password, passwordVerification }) {
+		constructor({ password, rawPassword, passwordVerification }) {
 			super({
 				start() {
 					Object.assign(this, {
 						password,
+						rawPassword,
 						passwordVerification
 					});
-					createKeys(this, password);
+					createKeys(this, password, rawPassword);
 				},
 				transform(chunk, controller) {
 					const zipCrypto = this;
 					let output;
 					let offset;
-					if (zipCrypto.password) {
-						zipCrypto.password = null;
+					if (zipCrypto.password || zipCrypto.rawPassword) {
+						zipCrypto.password = zipCrypto.rawPassword = null;
 						const header = getRandomValues(new Uint8Array(HEADER_LENGTH));
 						header[HEADER_LENGTH - 1] = zipCrypto.passwordVerification;
 						output = new Uint8Array(chunk.length + header.length);
@@ -1643,15 +1645,21 @@
 		return output;
 	}
 
-	function createKeys(target, password) {
+	function createKeys(target, password, rawPassword) {
 		const keys = [0x12345678, 0x23456789, 0x34567890];
 		Object.assign(target, {
 			keys,
 			crcKey0: new Crc32(keys[0]),
 			crcKey2: new Crc32(keys[2])
 		});
-		for (let index = 0; index < password.length; index++) {
-			updateKeys(target, password.charCodeAt(index));
+		if (rawPassword) {
+			for (let index = 0; index < rawPassword.length; index++) {
+				updateKeys(target, rawPassword[index]);
+			}
+		} else {
+			for (let index = 0; index < password.length; index++) {
+				updateKeys(target, password.charCodeAt(index));
+			}
 		}
 	}
 
@@ -1843,6 +1851,7 @@
 	 */
 
 
+	const DEFAULT_CHUNK_SIZE$1 = 64 * 1024;
 	const MESSAGE_EVENT_TYPE = "message";
 	const MESSAGE_START = "start";
 	const MESSAGE_PULL = "pull";
@@ -1911,6 +1920,9 @@
 
 		constructor(chunkSize) {
 			let pendingChunk;
+			if (!(chunkSize >= 1)) {
+				chunkSize = DEFAULT_CHUNK_SIZE$1;
+			}
 			super({
 				transform,
 				flush(controller) {
@@ -1928,12 +1940,12 @@
 					chunk = newChunk;
 					pendingChunk = null;
 				}
-				if (chunk.length > chunkSize) {
-					controller.enqueue(chunk.slice(0, chunkSize));
-					transform(chunk.slice(chunkSize), controller);
-				} else {
-					pendingChunk = chunk;
+				let offset = 0;
+				while (chunk.length - offset > chunkSize) {
+					controller.enqueue(chunk.slice(offset, offset + chunkSize));
+					offset += chunkSize;
 				}
+				pendingChunk = offset ? chunk.slice(offset) : chunk;
 			}
 		}
 	}
@@ -2089,6 +2101,7 @@
 			}
 			Object.assign(workerData, {
 				worker,
+				terminated: false,
 				interface: {
 					run: () => runWebWorker(workerData, { chunkSize, wasmURI, baseURI })
 				}
@@ -2304,7 +2317,7 @@
 		}
 	}
 
-	function sendMessage(message, { worker, writer, onTaskFinished, transferStreams }) {
+	function sendMessage(message, { worker, writer, transferStreams }) {
 		try {
 			const { value, readable, writable } = message;
 			const transferables = [];
@@ -2864,7 +2877,10 @@
 				throw new Error(ERR_HTTP_RANGE);
 			} else {
 				if (combineSizeEocd) {
-					httpReader.eocdCache = new Uint8Array(await response.arrayBuffer());
+					const eocdCache = new Uint8Array(await response.arrayBuffer());
+					if (response.status == 206 && eocdCache.length == END_OF_CENTRAL_DIR_LENGTH) {
+						httpReader.eocdCache = eocdCache;
+					}
 				}
 				let contentSize;
 				const contentRangeHeader = response.headers.get(HTTP_HEADER_CONTENT_RANGE);
@@ -3197,14 +3213,18 @@
 						writer.diskOffset += diskSourceWriter.size;
 						writer.diskNumber++;
 						diskWriter = null;
-						await this.write(chunk.subarray(availableSize));
+						if (chunk.length > availableSize) {
+							await this.write(chunk.subarray(availableSize));
+						}
 					} else {
 						await writeChunk(chunk);
 					}
 				},
 				async close() {
-					await diskWriter.ready;
-					await closeDisk();
+					if (diskWriter) {
+						await diskWriter.ready;
+						await closeDisk();
+					}
 				}
 			});
 			Object.defineProperty(writer, PROPERTY_NAME_WRITABLE, {
@@ -3677,14 +3697,18 @@
 			let startOffset = 0;
 			let zip64EndOfDirectory;
 			if (directoryDataOffset == MAX_32_BITS || directoryDataLength == MAX_32_BITS || filesLength == MAX_16_BITS || diskNumber == MAX_16_BITS) {
-				const endOfDirectoryLocatorArray = await readUint8Array(reader, endOfDirectoryInfo.offset - ZIP64_END_OF_CENTRAL_DIR_LOCATOR_LENGTH, ZIP64_END_OF_CENTRAL_DIR_LOCATOR_LENGTH);
+				const endOfDirectoryLocatorArray = endOfDirectoryInfo.offset >= ZIP64_END_OF_CENTRAL_DIR_LOCATOR_LENGTH ?
+					await readUint8Array(reader, endOfDirectoryInfo.offset - ZIP64_END_OF_CENTRAL_DIR_LOCATOR_LENGTH, ZIP64_END_OF_CENTRAL_DIR_LOCATOR_LENGTH) :
+					new Uint8Array();
 				const endOfDirectoryLocatorView = getDataView$1(endOfDirectoryLocatorArray);
-				if (getUint32(endOfDirectoryLocatorView, 0) == ZIP64_END_OF_CENTRAL_DIR_LOCATOR_SIGNATURE) {
+				if (endOfDirectoryLocatorArray.length == ZIP64_END_OF_CENTRAL_DIR_LOCATOR_LENGTH &&
+					getUint32(endOfDirectoryLocatorView, 0) == ZIP64_END_OF_CENTRAL_DIR_LOCATOR_SIGNATURE) {
 					directoryDataOffset = getBigUint64(endOfDirectoryLocatorView, 8);
 					let endOfDirectoryArray = await readUint8Array(reader, directoryDataOffset, ZIP64_END_OF_CENTRAL_DIR_LENGTH, -1);
 					let endOfDirectoryView = getDataView$1(endOfDirectoryArray);
 					const expectedDirectoryDataOffset = endOfDirectoryInfo.offset - ZIP64_END_OF_CENTRAL_DIR_LOCATOR_LENGTH - ZIP64_END_OF_CENTRAL_DIR_LENGTH - (reader.lastDiskOffset || 0);
-					if (getUint32(endOfDirectoryView, 0) != ZIP64_END_OF_CENTRAL_DIR_SIGNATURE && directoryDataOffset != expectedDirectoryDataOffset) {
+					if ((endOfDirectoryArray.length < ZIP64_END_OF_CENTRAL_DIR_LENGTH || getUint32(endOfDirectoryView, 0) != ZIP64_END_OF_CENTRAL_DIR_SIGNATURE) &&
+						directoryDataOffset != expectedDirectoryDataOffset && expectedDirectoryDataOffset >= 0) {
 						const originalDirectoryDataOffset = directoryDataOffset;
 						directoryDataOffset = expectedDirectoryDataOffset;
 						if (directoryDataOffset > originalDirectoryDataOffset) {
@@ -3693,7 +3717,7 @@
 						endOfDirectoryArray = await readUint8Array(reader, directoryDataOffset, ZIP64_END_OF_CENTRAL_DIR_LENGTH, -1);
 						endOfDirectoryView = getDataView$1(endOfDirectoryArray);
 					}
-					if (getUint32(endOfDirectoryView, 0) != ZIP64_END_OF_CENTRAL_DIR_SIGNATURE) {
+					if (endOfDirectoryArray.length < ZIP64_END_OF_CENTRAL_DIR_LENGTH || getUint32(endOfDirectoryView, 0) != ZIP64_END_OF_CENTRAL_DIR_SIGNATURE) {
 						throw new Error(ERR_EOCDR_LOCATOR_ZIP64_NOT_FOUND);
 					}
 					zip64EndOfDirectory = true;
@@ -4175,7 +4199,7 @@
 			directory.extraFieldUnicodeComment = extraFieldUnicodeComment;
 		}
 		const extraFieldAES = extraField.get(EXTRAFIELD_TYPE_AES);
-		if (extraFieldAES) {
+		if (extraFieldAES && extraFieldAES.data.length >= 7) {
 			readExtraFieldAES(extraFieldAES, directory, compressionMethod);
 			directory.extraFieldAES = extraFieldAES;
 		} else {
@@ -4212,19 +4236,23 @@
 		directory.zip64 = true;
 		const extraFieldView = getDataView$1(extraFieldZip64.data);
 		const missingProperties = ZIP64_PROPERTIES.filter(([propertyName, max]) => directory[propertyName] == max);
+		const requiredLength = missingProperties.reduce((length, [, max]) => length + ZIP64_EXTRACTION[max].bytes, 0);
+		if (extraFieldZip64.data.length < requiredLength) {
+			throw new Error(ERR_EXTRAFIELD_ZIP64_NOT_FOUND);
+		}
 		for (let indexMissingProperty = 0, offset = 0; indexMissingProperty < missingProperties.length; indexMissingProperty++) {
 			const [propertyName, max] = missingProperties[indexMissingProperty];
-			if (directory[propertyName] == max) {
-				const extraction = ZIP64_EXTRACTION[max];
-				directory[propertyName] = extraFieldZip64[propertyName] = extraction.getValue(extraFieldView, offset);
-				offset += extraction.bytes;
-			} else if (extraFieldZip64[propertyName]) {
-				throw new Error(ERR_EXTRAFIELD_ZIP64_NOT_FOUND);
-			}
+			const extraction = ZIP64_EXTRACTION[max];
+			directory[propertyName] = extraFieldZip64[propertyName] = extraction.getValue(extraFieldView, offset);
+			offset += extraction.bytes;
 		}
 	}
 
 	function readExtraFieldUnicode(extraFieldUnicode, propertyName, rawPropertyName, directory, fileEntry) {
+		if (extraFieldUnicode.data.length < 5) {
+			extraFieldUnicode.valid = false;
+			return;
+		}
 		const extraFieldView = getDataView$1(extraFieldUnicode.data);
 		const crc32 = new Crc32();
 		crc32.append(fileEntry[rawPropertyName]);
@@ -4336,6 +4364,9 @@
 	}
 
 	function readExtraFieldExtendedTimestamp(extraFieldExtendedTimestamp, directory, localDirectory) {
+		if (!extraFieldExtendedTimestamp.data.length) {
+			return;
+		}
 		const extraFieldView = getDataView$1(extraFieldExtendedTimestamp.data);
 		const flags = getUint8(extraFieldView, 0);
 		const timeProperties = [];
@@ -4682,6 +4713,9 @@
 			let nameAdded;
 			try {
 				name = name.trim();
+				if (getOptionValue(zipWriter, options, PROPERTY_NAME_DIRECTORY) && !name.endsWith(DIRECTORY_SIGNATURE)) {
+					name += DIRECTORY_SIGNATURE;
+				}
 				if (zipWriter.filenames.has(name)) {
 					throw new Error(ERR_DUPLICATED_NAME);
 				}
@@ -4726,6 +4760,9 @@
 			const zipWriter = this;
 			const { pendingAddFileCalls, writer } = this;
 			const { writable } = writer;
+			if (getLength(comment) > MAX_16_BITS) {
+				throw new Error(ERR_INVALID_COMMENT);
+			}
 			while (pendingAddFileCalls.size) {
 				await Promise.allSettled(Array.from(pendingAddFileCalls));
 			}
@@ -4744,14 +4781,19 @@
 			const { readable, writable } = new TransformStream();
 			this.readable = readable;
 			this.zipWriter = new ZipWriter(writable, options);
+			this.pendingAddFileCalls = new Set();
 		}
 
 		transform(path) {
 			const zipWriter = this.zipWriter;
+			let streamController;
 			const { readable, writable } = new TransformStream({
+				start(controller) {
+					streamController = controller;
+				},
 				flush: () => void closeArchive()
 			});
-			this.zipWriter.add(path, readable);
+			watchAddFileCall(this, this.zipWriter.add(path, readable), error => streamController.error(error));
 			return { readable: this.readable, writable };
 
 			async function closeArchive() {
@@ -4768,14 +4810,31 @@
 		}
 
 		writable(path) {
-			const { readable, writable } = new TransformStream();
-			this.zipWriter.add(path, readable);
+			let streamController;
+			const { readable, writable } = new TransformStream({
+				start(controller) {
+					streamController = controller;
+				}
+			});
+			watchAddFileCall(this, this.zipWriter.add(path, readable), error => streamController.error(error));
 			return writable;
 		}
 
-		close(comment = UNDEFINED_VALUE, options = {}) {
+		async close(comment = UNDEFINED_VALUE, options = {}) {
+			await Promise.all(Array.from(this.pendingAddFileCalls));
 			return this.zipWriter.close(comment, options);
 		}
+	}
+
+	function watchAddFileCall(zipWriterStream, promiseAddFile, onerror) {
+		zipWriterStream.pendingAddFileCalls.add(promiseAddFile);
+		promiseAddFile.catch(error => {
+			try {
+				onerror(error);
+			} catch {
+				// ignored
+			}
+		});
 	}
 
 	async function addFile(zipWriter, name, reader, options) {
