@@ -7097,7 +7097,13 @@ class FS {
 
 	remove(entry) {
 		detach(entry);
-		this.entries[entry.id] = null;
+		const removedEntries = [entry];
+		while (removedEntries.length) {
+			const removedEntry = removedEntries.pop();
+			this.entries[removedEntry.id] = null;
+			removedEntries.push(...removedEntry.children);
+		}
+		entry.parent = UNDEFINED_VALUE;
 	}
 
 	move(entry, destination) {
