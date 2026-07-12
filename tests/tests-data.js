@@ -14,6 +14,7 @@ export default ([
 	{ title: "Crypto", script: "./test-crypto.js" },
 	{ title: "Crypto (raw password)", script: "./test-crypto-raw-password.js" },
 	{ title: "Crypto check password only", script: "./test-crypto-check-password.js" },
+	{ title: "Crypto tampered data", script: "./test-crypto-tampered.js" },
 	{ title: "Custom IO classes", script: "./test-custom-io.js" },
 	{ title: "Custom temp stream", script: "./test-custom-temp-buffer.js" },
 	{ title: "Data descriptor signature", script: "./test-data-descriptor-signature.js" },
