@@ -16,10 +16,15 @@ async function test() {
 		const blob = await blobWriter.getData();
 		// FS.importZip reads from a caller-supplied reader
 		const importedFs = new zip.fs.FS();
+		// a pre-existing entry must be cleared: importZip replaces the tree like the other import* methods
+		importedFs.addText("stale.txt", "stale");
 		await importedFs.importZip(new zip.BlobReader(blob));
 		const fileEntry = importedFs.find(FILENAME);
 		if (!fileEntry || await fileEntry.getText() != TEXT_CONTENT) {
 			throw new Error();
+		}
+		if (importedFs.find("stale.txt")) {
+			throw new Error("importZip did not reset the filesystem tree");
 		}
 	} finally {
 		await zip.terminateWorkers();

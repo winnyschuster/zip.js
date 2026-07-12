@@ -6935,6 +6935,7 @@ class FS {
 	}
 
 	importZip(reader, options) {
+		resetFS(this);
 		return this.root.importZip(reader, options);
 	}
 
