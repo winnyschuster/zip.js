@@ -4841,22 +4841,33 @@
 		const attributesInfo = resolveAttributes(zipWriter, name, options);
 		({ name } = attributesInfo);
 		const metadataInfo = resolveMetadata(zipWriter, name, options);
-		const sizesInfo = await resolveSizes(zipWriter, reader, metadataInfo, options);
-		({ reader } = sizesInfo);
 		const { comment } = metadataInfo;
 		const extraField = options[PROPERTY_NAME_EXTRA_FIELD];
-		const { diskOffset, diskNumber } = zipWriter.writer;
-		options = Object.assign({}, options, attributesInfo.resolvedOptions, metadataInfo.resolvedOptions, sizesInfo.resolvedOptions, {
-			internalFileAttribute: metadataInfo.resolvedOptions.internalFileAttributes,
-			externalFileAttribute: attributesInfo.resolvedOptions.externalFileAttributes,
-			signature: options[PROPERTY_NAME_SIGNATURE],
-			offset: zipWriter.offset - diskOffset,
-			diskNumberStart: diskNumber
-		});
-		const headerInfo = getHeaderInfo(options);
-		const dataDescriptorInfo = getDataDescriptorInfo(options);
-		const metadataSize = getLength(headerInfo.localHeaderArray, dataDescriptorInfo.dataDescriptorArray);
-		const fileEntry = await getFileEntry(zipWriter, name, reader, { headerInfo, dataDescriptorInfo, metadataSize }, options);
+		// Reserve the central-directory position (the insertion order of the files map, i.e. the
+		// order in which entries are listed by getEntries()) synchronously, in add() call order,
+		// before resolveSizes() initializes the reader. Otherwise concurrent entries whose readers
+		// initialize at different speeds would be listed in reader-init completion order instead.
+		zipWriter.files.set(name, UNDEFINED_VALUE);
+		let fileEntry;
+		try {
+			const sizesInfo = await resolveSizes(zipWriter, reader, metadataInfo, options);
+			({ reader } = sizesInfo);
+			const { diskOffset, diskNumber } = zipWriter.writer;
+			options = Object.assign({}, options, attributesInfo.resolvedOptions, metadataInfo.resolvedOptions, sizesInfo.resolvedOptions, {
+				internalFileAttribute: metadataInfo.resolvedOptions.internalFileAttributes,
+				externalFileAttribute: attributesInfo.resolvedOptions.externalFileAttributes,
+				signature: options[PROPERTY_NAME_SIGNATURE],
+				offset: zipWriter.offset - diskOffset,
+				diskNumberStart: diskNumber
+			});
+			const headerInfo = getHeaderInfo(options);
+			const dataDescriptorInfo = getDataDescriptorInfo(options);
+			const metadataSize = getLength(headerInfo.localHeaderArray, dataDescriptorInfo.dataDescriptorArray);
+			fileEntry = await getFileEntry(zipWriter, name, reader, { headerInfo, dataDescriptorInfo, metadataSize }, options);
+		} catch (error) {
+			zipWriter.files.delete(name);
+			throw error;
+		}
 		Object.assign(fileEntry, { name, comment, extraField });
 		return new Entry(fileEntry);
 	}
