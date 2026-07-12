@@ -22,6 +22,7 @@ export default ([
 	{ title: "Data descriptor signature", script: "./test-data-descriptor-signature.js" },
 	{ title: "Data descriptor", script: "./test-data-descriptor.js" },
 	{ title: "Data URI", script: "./test-data-uri.js" },
+	{ title: "Data URI (small chunks)", script: "./test-data-uri-chunks.js" },
 	{ title: "Deflate64", script: "./test-deflate64.js" },
 	{ title: "Detect directory executable", script: "./test-detect-directory-exec.js" },
 	{ title: "Directory", script: "./test-directory.js" },
