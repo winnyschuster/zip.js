@@ -10,15 +10,19 @@ export { test };
 
 async function test() {
 	zip.configure({ chunkSize: 1024, useWebWorkers: false });
-	for (const parallel of [false, true]) {
-		for (let segmentSize = MIN_SEGMENT_SIZE; segmentSize <= MAX_SEGMENT_SIZE; segmentSize += SEGMENT_SIZE_STEP) {
-			await testSegmentSize(segmentSize, parallel);
+	for (const zip64 of [false, true]) {
+		// scan zip64 coarsely, its headers only differ from the other entries by their size
+		const segmentSizeStep = zip64 ? SEGMENT_SIZE_STEP * 3 : SEGMENT_SIZE_STEP;
+		for (const parallel of [false, true]) {
+			for (let segmentSize = MIN_SEGMENT_SIZE; segmentSize <= MAX_SEGMENT_SIZE; segmentSize += segmentSizeStep) {
+				await testSegmentSize(segmentSize, parallel, zip64);
+			}
 		}
 	}
 	await zip.terminateWorkers();
 }
 
-async function testSegmentSize(segmentSize, parallel) {
+async function testSegmentSize(segmentSize, parallel, zip64) {
 	const writers = [];
 	function* blobWriterGenerator() {
 		while (true) {
@@ -28,7 +32,7 @@ async function testSegmentSize(segmentSize, parallel) {
 			yield writer;
 		}
 	}
-	const zipWriter = new zip.ZipWriter(blobWriterGenerator());
+	const zipWriter = new zip.ZipWriter(blobWriterGenerator(), { zip64 });
 	if (parallel) {
 		await Promise.all(CONTENTS.map((content, indexContent) => zipWriter.add("file" + indexContent + ".txt", new zip.TextReader(content), { level: 0 })));
 	} else {
