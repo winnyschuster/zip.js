@@ -26,8 +26,8 @@ async function test() {
 	// exercises the worker codec path: when an entry's source fails mid-write, the split
 	// writable must not be left locked, so that the next entry can still be added
 	zip.configure({ useWebWorkers: true });
+	const writers = [];
 	try {
-		const writers = [];
 		const zipWriter = new zip.ZipWriter(blobWriterGenerator());
 		await zipWriter.add("good0.txt", new zip.TextReader(GOOD_CONTENT));
 		// this entry fails mid-write; the offset of the next entry must not be corrupted
