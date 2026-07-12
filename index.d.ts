@@ -2199,11 +2199,48 @@ export interface ZipDirectoryEntryExportOptions
  * const unzippedBlob = await firstEntry.getBlob(zip.getMimeType(firstEntry.name));
  * ```
  */
-export class FS extends ZipDirectoryEntry {
+export interface FS
+  extends Pick<
+    ZipDirectoryEntry,
+    | "getChildByName"
+    | "addDirectory"
+    | "addText"
+    | "addBlob"
+    | "addData64URI"
+    | "addUint8Array"
+    | "addHttpContent"
+    | "addReadable"
+    | "addFile"
+    | "addFileSystemEntry"
+    | "addFileSystemHandle"
+    | "importBlob"
+    | "importData64URI"
+    | "importUint8Array"
+    | "importHttpContent"
+    | "importReadable"
+    | "importZip"
+    | "exportBlob"
+    | "exportData64URI"
+    | "exportUint8Array"
+    | "exportWritable"
+    | "exportZip"
+    | "isPasswordProtected"
+    | "checkPassword"
+  > {}
+
+export class FS {
   /**
    * The root directory.
    */
   root: ZipDirectoryEntry;
+  /**
+   * The array of all the {@link ZipEntry} instances indexed by {@link ZipEntry#id}.
+   */
+  entries: (ZipEntry | null)[];
+  /**
+   * The children of the root directory.
+   */
+  readonly children: ZipEntry[];
   /**
    * Removes a {@link ZipEntry} instance and its children
    *

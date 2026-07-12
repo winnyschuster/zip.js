@@ -41,6 +41,7 @@
     "test-deno": "cd ./tests && deno test --allow-read ./deno-runner.js",
     "test-node": "cd ./tests && node ./node-runner.js",
     "test-bun": "cd ./tests && bun test ./bun-runner.js --timeout 30000",
+    "test-types": "tsc -p ./tests/types/tsconfig.json",
     "test-firefox": "firefox http://localhost:8081/tests/ & npx http-server -p=8081 & wait $!",
     "test-chrome": "google-chrome http://localhost:8081/tests/ & npx http-server -p=8081 & wait $!"
   },
