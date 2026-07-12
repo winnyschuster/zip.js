@@ -1,5 +1,6 @@
 export default ([
 	{ title: "Abort signal (read)", script: "./test-abort-signal-read.js" },
+	{ title: "Abort signal (worker reuse)", script: "./test-worker-reuse-after-abort.js" },
 	{ title: "Abort signal (write)", script: "./test-abort-signal-write.js" },
 	{ title: "Append to zip", script: "./test-append-to-zip.js" },
 	{ title: "Append to zip (central directory metadata)", script: "./test-prepend-zip-metadata.js" },
