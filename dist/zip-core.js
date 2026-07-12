@@ -1968,8 +1968,10 @@
 
 
 	const MODULE_WORKER_OPTIONS = { type: "module" };
+	const ERROR_EVENT_TYPE = "error";
+	const MESSAGE_ERROR_EVENT_TYPE = "messageerror";
 
-	let webWorkerSupported, webWorkerURI, webWorkerOptions;
+	let webWorkerSupported, webWorkerSource, webWorkerURI, webWorkerOptions;
 	let transferStreamsSupported = true;
 	try {
 		transferStreamsSupported = typeof structuredClone == FUNCTION_TYPE && structuredClone(new DOMException("", "AbortError")).code !== UNDEFINED_VALUE;
@@ -2008,18 +2010,17 @@
 					});
 				},
 				onTaskFinished() {
-					if (!workerData.busy) {
-						return;
+					if (workerData.busy) {
+						const { resolveTerminated } = workerData;
+						if (resolveTerminated) {
+							workerData.resolveTerminated = null;
+							workerData.terminated = true;
+							workerData.worker.terminate();
+							resolveTerminated();
+						}
+						workerData.busy = false;
+						onTaskFinished(workerData);
 					}
-					const { resolveTerminated } = workerData;
-					if (resolveTerminated) {
-						workerData.resolveTerminated = null;
-						workerData.terminated = true;
-						workerData.worker.terminate();
-						resolveTerminated();
-					}
-					workerData.busy = false;
-					onTaskFinished(workerData);
 				}
 			});
 			if (webWorkerSupported === UNDEFINED_VALUE) {
@@ -2142,7 +2143,7 @@
 			result
 		});
 		const { readable, options } = workerData;
-		const { writable, closed } = watchClosedStream(workerData.writable);
+		const { writable, closed, abortPipe } = watchClosedStream(workerData.writable);
 		let streamsTransferred;
 		try {
 			streamsTransferred = sendMessage({
@@ -2153,6 +2154,12 @@
 				writable
 			}, workerData);
 		} catch (error) {
+			abortPipe();
+			try {
+				await closed;
+			} catch {
+				// ignored
+			}
 			workerData.onTaskFinished();
 			throw error;
 		}
@@ -2163,8 +2170,23 @@
 			});
 		}
 		try {
-			return await result;
-		} finally {
+			const resultValue = await result;
+			await closeWritable();
+			await closed;
+			return resultValue;
+		} catch (error) {
+			await closeWritable();
+			// unblock the pipe watcher if the worker died before closing its end of the stream
+			abortPipe();
+			try {
+				await closed;
+			} catch {
+				// ignored
+			}
+			throw error;
+		}
+
+		async function closeWritable() {
 			if (!streamsTransferred && !writable.locked) {
 				try {
 					await writable.getWriter().close();
@@ -2172,14 +2194,14 @@
 					// ignored
 				}
 			}
-			await closed;
 		}
 	}
 
 	function watchClosedStream(writableSource) {
+		const abortController = new AbortController();
 		const { writable, readable } = new TransformStream();
-		const closed = readable.pipeTo(writableSource, { preventClose: true });
-		return { writable, closed };
+		const closed = readable.pipeTo(writableSource, { preventClose: true, preventAbort: true, signal: abortController.signal });
+		return { writable, closed, abortPipe: () => abortController.abort() };
 	}
 
 	function terminateWorker$1(workerData) {
@@ -2196,7 +2218,7 @@
 
 	function getWebWorker(url, baseURI, workerData, isModuleType, useBlobURI = true) {
 		let worker, resolvedURI, resolvedOptions;
-		if (webWorkerURI === UNDEFINED_VALUE) {
+		if (webWorkerURI === UNDEFINED_VALUE || webWorkerSource !== url) {
 			// deno-lint-ignore valid-typeof
 			const isFunctionURI = typeof url == FUNCTION_TYPE;
 			if (isFunctionURI) {
@@ -2253,13 +2275,33 @@
 					}
 				}
 			}
+			webWorkerSource = url;
 			webWorkerURI = resolvedURI;
 			webWorkerOptions = resolvedOptions;
 		} else {
 			worker = new Worker(webWorkerURI, webWorkerOptions);
 		}
 		worker.addEventListener(MESSAGE_EVENT_TYPE, event => onMessage(event, workerData));
+		worker.addEventListener(ERROR_EVENT_TYPE, event => onWorkerError(event, workerData));
+		worker.addEventListener(MESSAGE_ERROR_EVENT_TYPE, event => onWorkerError(event, workerData));
 		return worker;
+	}
+
+	function onWorkerError(event, workerData) {
+		if (event.preventDefault) {
+			event.preventDefault();
+		}
+		const { rejectResult, writer, onTaskFinished } = workerData;
+		// the worker is unusable (e.g. its script failed to load); terminate it and
+		// fail the current task instead of letting it hang forever
+		terminateWorker$1(workerData);
+		if (rejectResult) {
+			rejectResult(event.error || new Error(event.message || ERROR_EVENT_TYPE));
+			if (writer) {
+				writer.releaseLock();
+			}
+			onTaskFinished();
+		}
 	}
 
 	function sendMessage(message, { worker, writer, onTaskFinished, transferStreams }) {
@@ -2324,8 +2366,6 @@
 				}
 			}
 		} catch (error) {
-			// the worker pipeline is in an unrecoverable state and may still post messages
-			// that would be misattributed to the next task reusing this worker; terminate it
 			terminateWorker$1(workerData);
 			close(error);
 		}
@@ -2657,12 +2697,10 @@
 			for (; indexArray < array.length; indexArray++) {
 				writer.pending += String.fromCharCode(array[indexArray]);
 			}
-			if (dataString.length) {
-				if (dataString.length > 2) {
-					writer.data += btoa(dataString);
-				} else {
-					writer.pending += dataString;
-				}
+			if (dataString.length > 2) {
+				writer.data += btoa(dataString);
+			} else {
+				writer.pending = dataString + writer.pending;
 			}
 		}
 
@@ -4588,8 +4626,8 @@
 					compressionMethod = COMPRESSION_METHOD_AES;
 				}
 				const extraFieldLength = getLength(rawExtraFieldZip64, rawExtraFieldAES, rawExtraFieldExtendedTimestamp, rawExtraFieldNTFS, rawExtraFieldUnix, rawExtraField);
-				const zip64UncompressedSize = zip64 && uncompressedSize > MAX_32_BITS;
-				const zip64CompressedSize = zip64 && compressedSize > MAX_32_BITS;
+				const zip64UncompressedSize = zip64 && uncompressedSize >= MAX_32_BITS;
+				const zip64CompressedSize = zip64 && compressedSize >= MAX_32_BITS;
 				const {
 					headerArray,
 					headerView
@@ -4612,8 +4650,8 @@
 				Object.assign(entry, {
 					zip64UncompressedSize,
 					zip64CompressedSize,
-					zip64Offset: zip64 && this.offset - diskOffset > MAX_32_BITS,
-					zip64DiskNumberStart: zip64 && diskNumber > MAX_16_BITS,
+					zip64Offset: zip64 && this.offset - diskOffset >= MAX_32_BITS,
+					zip64DiskNumberStart: zip64 && diskNumber >= MAX_16_BITS,
 					rawExtraFieldZip64,
 					rawExtraFieldAES,
 					rawExtraFieldExtendedTimestamp,
@@ -5027,8 +5065,8 @@
 				maximumCompressedSize = getMaximumCompressedSize(uncompressedSize) + encryptionOverhead;
 			}
 		}
-		const zip64UncompressedSize = zip64Enabled || uncompressedSize > MAX_32_BITS;
-		const zip64CompressedSize = zip64Enabled || maximumCompressedSize > MAX_32_BITS;
+		const zip64UncompressedSize = zip64Enabled || uncompressedSize >= MAX_32_BITS;
+		const zip64CompressedSize = zip64Enabled || maximumCompressedSize >= MAX_32_BITS;
 		if (zip64UncompressedSize || zip64CompressedSize) {
 			if (zip64 === false) {
 				throw new Error(ERR_UNSUPPORTED_FORMAT);
@@ -5336,8 +5374,8 @@
 					uncompressedSize = result.inputSize;
 					signature = result.signature;
 				}
-				if ((!zip64CompressedSize && compressedSize > MAX_32_BITS) ||
-					(!zip64UncompressedSize && uncompressedSize > MAX_32_BITS)) {
+				if ((!zip64CompressedSize && compressedSize >= MAX_32_BITS) ||
+					(!zip64UncompressedSize && uncompressedSize >= MAX_32_BITS)) {
 					throw new Error(ERR_UNSUPPORTED_FORMAT);
 				}
 			} catch (error) {
@@ -5769,8 +5807,8 @@
 				uncompressedSize,
 				compressedSize
 			} = fileEntry;
-			const zip64Offset = fileEntry.offset > MAX_32_BITS;
-			const zip64DiskNumberStart = fileEntry.diskNumberStart > MAX_16_BITS;
+			const zip64Offset = fileEntry.offset >= MAX_32_BITS;
+			const zip64DiskNumberStart = fileEntry.diskNumberStart >= MAX_16_BITS;
 			let rawExtraFieldZip64;
 			if (zip64Offset || zip64DiskNumberStart || zip64UncompressedSize || zip64CompressedSize) {
 				const length = 4 + (zip64UncompressedSize ? 8 : 0) + (zip64CompressedSize ? 8 : 0) + (zip64Offset ? 8 : 0) + (zip64DiskNumberStart ? 4 : 0);
@@ -5919,7 +5957,7 @@
 			lastDiskNumber++;
 		}
 		let zip64 = getOptionValue(zipWriter, options, PROPERTY_NAME_ZIP64);
-		if (directoryOffset > MAX_32_BITS || directoryDataLength > MAX_32_BITS || filesLength > MAX_16_BITS || lastDiskNumber > MAX_16_BITS) {
+		if (directoryOffset >= MAX_32_BITS || directoryDataLength >= MAX_32_BITS || filesLength >= MAX_16_BITS || lastDiskNumber >= MAX_16_BITS) {
 			if (zip64 === false) {
 				throw new Error(ERR_UNSUPPORTED_FORMAT);
 			} else {
