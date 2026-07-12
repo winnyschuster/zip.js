@@ -1,0 +1,92 @@
+/* global Uint8Array, Response */
+
+import * as zip from "../../index.js";
+
+const TEXT_CONTENT = "Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod tincidunt ut laoreet dolore magna aliquam erat volutpat.";
+const FILENAME = "lorem.txt";
+const SEGMENT_SIZE = 100;
+
+export { test };
+
+async function test() {
+	await testSplitDataWriterExactFill();
+	await testSplitDataWriterEmpty();
+	await testHttpReaderIgnoredRangeRequest();
+}
+
+// a payload filling a bounded number of disks exactly must not pull an
+// extra writer from the generator
+async function testSplitDataWriterExactFill() {
+	const writers = [];
+	const splitDataWriter = new zip.SplitDataWriter(blobWriterGenerator(writers, 2), SEGMENT_SIZE);
+	await splitDataWriter.init();
+	const writer = splitDataWriter.writable.getWriter();
+	await writer.write(new Uint8Array(SEGMENT_SIZE).fill(1));
+	await writer.write(new Uint8Array(SEGMENT_SIZE).fill(2));
+	await writer.close();
+	const blobs = await Promise.all(writers.map(writer => writer.getData()));
+	if (writers.length != 2 || splitDataWriter.diskNumber != 2 ||
+		blobs[0].size != SEGMENT_SIZE || blobs[1].size != SEGMENT_SIZE) {
+		throw new Error();
+	}
+}
+
+// closing without writing any data must not crash
+async function testSplitDataWriterEmpty() {
+	const writers = [];
+	const splitDataWriter = new zip.SplitDataWriter(blobWriterGenerator(writers, 1), SEGMENT_SIZE);
+	await splitDataWriter.init();
+	await splitDataWriter.writable.getWriter().close();
+	if (writers.length != 0) {
+		throw new Error();
+	}
+}
+
+// a server advertising range support but ignoring the Range header must make
+// the reader fail with ERR_HTTP_RANGE instead of caching the whole response
+// as the end of central directory record
+async function testHttpReaderIgnoredRangeRequest() {
+	const blobWriter = new zip.BlobWriter("application/zip");
+	const zipWriter = new zip.ZipWriter(blobWriter);
+	await zipWriter.add(FILENAME, new zip.TextReader(TEXT_CONTENT));
+	await zipWriter.close();
+	await zip.terminateWorkers();
+	const zipArray = new Uint8Array(await (await blobWriter.getData()).arrayBuffer());
+	const originalFetch = globalThis.fetch;
+	globalThis.fetch = async () => ({
+		status: 200,
+		headers: new Map([
+			["Accept-Ranges", "bytes"],
+			["Content-Length", String(zipArray.length)]
+		]),
+		arrayBuffer: async () => zipArray.slice().buffer,
+		body: new Response(zipArray.slice()).body
+	});
+	try {
+		const zipReader = new zip.ZipReader(new zip.HttpReader("http://localhost/test.zip", {
+			useRangeHeader: true,
+			combineSizeEocd: true,
+			useXHR: false
+		}));
+		try {
+			await zipReader.getEntries();
+			throw new Error("no error thrown");
+		} catch (error) {
+			if (error.message != zip.ERR_HTTP_RANGE) {
+				throw error;
+			}
+		} finally {
+			await zipReader.close();
+		}
+	} finally {
+		globalThis.fetch = originalFetch;
+	}
+}
+
+function* blobWriterGenerator(writers, count) {
+	for (let indexWriter = 0; indexWriter < count; indexWriter++) {
+		const blobWriter = new zip.BlobWriter("application/octet-stream");
+		writers.push(blobWriter);
+		yield blobWriter;
+	}
+}

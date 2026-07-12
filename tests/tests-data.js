@@ -11,6 +11,7 @@ export default ([
 	{ title: "Malformed zip files", script: "./test-malformed-zip.js" },
 	{ title: "Invalid chunk size configuration", script: "./test-config-chunk-size.js" },
 	{ title: "Writer edge cases", script: "./test-writer-edge-cases.js" },
+	{ title: "IO edge cases", script: "./test-io-edge-cases.js" },
 	{ title: "Blob", script: "./test-blob.js" },
 	{ title: "Comments", script: "./test-comments.js" },
 	{ title: "Common JS", script: "./test-common-js.cjs", env: ["node"] },
