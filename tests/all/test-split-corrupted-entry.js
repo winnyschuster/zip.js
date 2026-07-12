@@ -1,6 +1,6 @@
 import * as zip from "../../index.js";
 
-const GOOD_CONTENT = "good-content";
+const GOOD_CONTENT = "good-content-".repeat(50);
 const SEGMENT_SIZE = 400;
 
 export { test };
@@ -23,29 +23,23 @@ class FailingReader extends zip.Reader {
 }
 
 async function test() {
-	zip.configure({ useWebWorkers: false });
+	// exercises the worker codec path: when an entry's source fails mid-write, the split
+	// writable must not be left locked, so that the next entry can still be added
+	zip.configure({ useWebWorkers: true });
 	try {
 		const writers = [];
-		function* blobWriterGenerator() {
-			while (true) {
-				const writer = new zip.BlobWriter();
-				writer.maxSize = SEGMENT_SIZE;
-				writers.push(writer);
-				yield writer;
-			}
-		}
 		const zipWriter = new zip.ZipWriter(blobWriterGenerator());
-		await zipWriter.add("good0.txt", new zip.TextReader(GOOD_CONTENT), { level: 0 });
+		await zipWriter.add("good0.txt", new zip.TextReader(GOOD_CONTENT));
 		// this entry fails mid-write; the offset of the next entry must not be corrupted
 		try {
-			await zipWriter.add("bad.txt", new FailingReader(500), { level: 0 });
+			await zipWriter.add("bad.txt", new FailingReader(500));
 			throw new Error();
 		} catch (error) {
 			if (error.message != "simulated source failure") {
 				throw error;
 			}
 		}
-		await zipWriter.add("good1.txt", new zip.TextReader(GOOD_CONTENT), { level: 0 });
+		await zipWriter.add("good1.txt", new zip.TextReader(GOOD_CONTENT));
 		await zipWriter.close();
 		const readers = await Promise.all(writers.map(async writer => new zip.BlobReader(await writer.getData())));
 		const zipReader = new zip.ZipReader(new zip.SplitDataReader(readers));
@@ -65,7 +59,15 @@ async function test() {
 			await zipReader.close();
 		}
 	} finally {
-		zip.configure({ useWebWorkers: true });
 		await zip.terminateWorkers();
+	}
+
+	function* blobWriterGenerator() {
+		while (true) {
+			const writer = new zip.BlobWriter();
+			writer.maxSize = SEGMENT_SIZE;
+			writers.push(writer);
+			yield writer;
+		}
 	}
 }
