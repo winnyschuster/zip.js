@@ -10,8 +10,13 @@ export { test };
 
 async function test() {
 	zip.configure({ useWebWorkers: true });
+	await testRawPassword(false);
+	await testRawPassword(true);
+}
+
+async function testRawPassword(zipCrypto) {
 	const blobWriter = new zip.BlobWriter("application/zip");
-	const zipWriter = new zip.ZipWriter(blobWriter, { rawPassword: new Uint8Array([0xce, 0xd2, 0xca, 0xc7, 0xc3, 0xdc, 0xb4, 0x61]), encryptionStrength: 3 });
+	const zipWriter = new zip.ZipWriter(blobWriter, { rawPassword: new Uint8Array([0xce, 0xd2, 0xca, 0xc7, 0xc3, 0xdc, 0xb4, 0x61]), encryptionStrength: 3, zipCrypto });
 	await zipWriter.add(FILENAME, new zip.BlobReader(BLOB));
 	await zipWriter.close();
 	const zipReader = new zip.ZipReader(new zip.BlobReader(await blobWriter.getData()));
