@@ -34,6 +34,21 @@ async function test() {
 		hiddenRecordView.setUint16(endOfDirectoryOffset + 8, CONTENTS.length - 1, true);
 		hiddenRecordView.setUint16(endOfDirectoryOffset + 10, CONTENTS.length - 1, true);
 		await expectAmbiguous(hiddenRecordArray, "trailing central directory data");
+		// an end of central directory record disagreeing with its zip64 counterpart must be rejected
+		const zip64BlobWriter = new zip.BlobWriter("application/zip");
+		const zip64ZipWriter = new zip.ZipWriter(zip64BlobWriter, { zip64: true, level: 0, dataDescriptor: false });
+		for (let indexContent = 0; indexContent < CONTENTS.length; indexContent++) {
+			await zip64ZipWriter.add("file" + indexContent + ".txt", new zip.TextReader(CONTENTS[indexContent]));
+		}
+		await zip64ZipWriter.close();
+		// zip.js saturates every end of central directory field when zip64 is used; un-saturate the entry
+		// count to a value that disagrees with the zip64 record while the other fields stay saturated
+		const mismatchedArray = new Uint8Array(await (await zip64BlobWriter.getData()).arrayBuffer());
+		const mismatchedView = new DataView(mismatchedArray.buffer);
+		const mismatchedEndOfDirectoryOffset = mismatchedArray.length - 22;
+		mismatchedView.setUint16(mismatchedEndOfDirectoryOffset + 8, CONTENTS.length - 1, true);
+		mismatchedView.setUint16(mismatchedEndOfDirectoryOffset + 10, CONTENTS.length - 1, true);
+		await expectAmbiguous(mismatchedArray, "mismatched zip64 end of central directory record");
 	} finally {
 		await zip.terminateWorkers();
 	}
