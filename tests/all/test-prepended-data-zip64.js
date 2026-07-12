@@ -45,10 +45,13 @@ async function test() {
 	}
 	prependedArray.set(array.subarray(array.length - 22), offset);
 	new DataView(prependedArray.buffer).setUint32(offset + 12, directoryDataLength, true);
-	const zipReader = new zip.ZipReader(new zip.Uint8ArrayReader(prependedArray));
+	const zipReader = new zip.ZipReader(new zip.Uint8ArrayReader(prependedArray), { extractPrependedData: true });
 	try {
 		const entries = await zipReader.getEntries();
 		if (entries.length != CONTENTS.length) {
+			throw new Error();
+		}
+		if (zipReader.prependedData.length != PREPENDED_DATA_LENGTH) {
 			throw new Error();
 		}
 		for (let indexEntry = 0; indexEntry < entries.length; indexEntry++) {
