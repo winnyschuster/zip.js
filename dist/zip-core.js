@@ -4843,10 +4843,6 @@
 		const metadataInfo = resolveMetadata(zipWriter, name, options);
 		const { comment } = metadataInfo;
 		const extraField = options[PROPERTY_NAME_EXTRA_FIELD];
-		// Reserve the central-directory position (the insertion order of the files map, i.e. the
-		// order in which entries are listed by getEntries()) synchronously, in add() call order,
-		// before resolveSizes() initializes the reader. Otherwise concurrent entries whose readers
-		// initialize at different speeds would be listed in reader-init completion order instead.
 		zipWriter.files.set(name, UNDEFINED_VALUE);
 		let fileEntry;
 		try {

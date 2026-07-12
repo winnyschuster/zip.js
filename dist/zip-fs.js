@@ -4849,10 +4849,6 @@
 		const metadataInfo = resolveMetadata(zipWriter, name, options);
 		const { comment } = metadataInfo;
 		const extraField = options[PROPERTY_NAME_EXTRA_FIELD];
-		// Reserve the central-directory position (the insertion order of the files map, i.e. the
-		// order in which entries are listed by getEntries()) synchronously, in add() call order,
-		// before resolveSizes() initializes the reader. Otherwise concurrent entries whose readers
-		// initialize at different speeds would be listed in reader-init completion order instead.
 		zipWriter.files.set(name, UNDEFINED_VALUE);
 		let fileEntry;
 		try {
@@ -6761,10 +6757,11 @@
 		async checkPassword(password, options = {}) {
 			const zipEntry = this;
 			if (zipEntry.isPasswordProtected()) {
-				options.password = password;
-				options.checkPasswordOnly = true;
 				try {
-					await zipEntry.data.getData(null, options);
+					await zipEntry.data.getData(null, Object.assign({}, options, {
+						password,
+						checkPasswordOnly: true
+					}));
 					return true;
 				} catch (error) {
 					if (error.message == ERR_INVALID_PASSWORD) {
