@@ -79,6 +79,7 @@ export default ([
 	{ title: "Text UNIX special bits", script: "./test-unix-special-bits.js" },
 	{ title: "Text UNIX unpack", script: "./test-unix-unpack.js" },
 	{ title: "USDZ", script: "./test-usdz.js" },
+	{ title: "Worker starvation", script: "./test-worker-starvation.js" },
 	{ title: "Worker timeout", script: "./test-worker-timeout.js" },
 	{ title: "Wrapped zip file", script: "./test-wrapped.js" },
 	{ title: "Writable Stream", script: "./test-writable-stream.js" },

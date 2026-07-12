@@ -214,6 +214,14 @@ export interface Configuration extends WorkerConfiguration {
    */
   terminateWorkerTimeout?: number;
   /**
+   * The delay in milliseconds after which the oldest pending compression/decompression task is run without a web worker when no task completes.
+   *
+   * It prevents deadlocks when entries read from a `ZipReader` are added concurrently into a `ZipWriter` and all the web workers are waiting for data.
+   *
+   * @defaultValue 5000
+   */
+  workerStarvationTimeout?: number;
+  /**
    * The URI of the web worker.
    *
    * It allows using alternative deflate implementations or specifying a URL to the worker script if the CSP of the page blocks scripts imported from a Data URI.
