@@ -2346,6 +2346,10 @@ export const ERR_INVALID_SIGNATURE: string;
  */
 export const ERR_INVALID_UNCOMPRESSED_SIZE: string;
 /**
+ * Invalid compressed data error
+ */
+export const ERR_INVALID_COMPRESSED_DATA: string;
+/**
  * Invalid password error
  */
 export const ERR_INVALID_PASSWORD: string;
