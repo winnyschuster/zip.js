@@ -61,5 +61,3 @@ async function test() {
 		throw new Error();
 	}
 }
-
-test();
