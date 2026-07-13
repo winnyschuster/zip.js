@@ -61,6 +61,8 @@ export default ([
 	{ title: "Filesystem export", script: "./test-fs-export-options.js" },
 	{ title: "Filesystem export error", script: "./test-fs-export-error.js" },
 	{ title: "Filesystem export zip", script: "./test-fs-export-zip.js" },
+	{ title: "Filesystem export File System handle", script: "./test-fs-export-file-system-handle.js" },
+	{ title: "Filesystem export File System handle (real OPFS)", script: "./test-fs-export-file-system-handle-browser.js", env: ["browser"] },
 	{ title: "Filesystem find (verbatim slash name)", script: "./test-fs-find-slash-name.js" },
 	{ title: "Filesystem HTTP import", script: "./test-fs-http-import.js" },
 	{ title: "Filesystem import edge cases", script: "./test-fs-import-edge-cases.js" },

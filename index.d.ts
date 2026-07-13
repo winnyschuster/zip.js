@@ -2223,6 +2223,17 @@ export class ZipDirectoryEntry extends ZipEntry {
     options?: ZipDirectoryEntryExportOptions
   ): Promise<WritableStream>;
   /**
+   * Writes the entry and its descendants into a directory as files and sub-directories via the File System Access API (e.g. the Origin Private File System). Files are streamed and directories are merged into the target; colliding files are overwritten. This is the inverse of {@link ZipDirectoryEntry#addFileSystemHandle}.
+   *
+   * @param directoryHandle The target `FileSystemDirectoryHandle` instance.
+   * @param options The options.
+   * @returns A promise resolving to the target `FileSystemDirectoryHandle` instance.
+   */
+  exportFileSystemHandle(
+    directoryHandle: FileSystemDirectoryHandle,
+    options?: ZipDirectoryEntryExportFileSystemHandleOptions
+  ): Promise<FileSystemDirectoryHandle>;
+  /**
    * Creates a zip file via a custom {@link Writer} instance containing the entry and its descendants
    *
    * @param writer The {@link Writer} instance.
@@ -2267,6 +2278,19 @@ export interface ZipDirectoryEntryExportOptions
 }
 
 /**
+ * Represents the options passed to {@link ZipDirectoryEntry#exportFileSystemHandle} and {@link FS#exportFileSystemHandle}.
+ */
+export interface ZipDirectoryEntryExportFileSystemHandleOptions
+  extends EntryGetDataOptions {
+  /**
+   * `true` to write independent files concurrently instead of one after another.
+   *
+   * @defaultValue false
+   */
+  concurrent?: boolean;
+}
+
+/**
  * Represents a Filesystem instance.
  *
  * @example
@@ -2308,6 +2332,7 @@ export interface FS
     | "exportData64URI"
     | "exportUint8Array"
     | "exportWritable"
+    | "exportFileSystemHandle"
     | "exportZip"
     | "isPasswordProtected"
     | "checkPassword"
