@@ -8,6 +8,7 @@ export default ([
 	{ title: "Append to zip (compression level bits)", script: "./test-prepend-zip-level-bits.js" },
 	{ title: "Uint8Array", script: "./test-array.js" },
 	{ title: "Arraybuffer", script: "./test-arrayBuffer.js" },
+	{ title: "Filesystem getArrayBuffer", script: "./test-fs-array-buffer.js" },
 	{ title: "Base 64", script: "./test-base64.js" },
 	{ title: "Ambiguity check", script: "./test-check-ambiguity.js" },
 	{ title: "Malformed zip files", script: "./test-malformed-zip.js" },
