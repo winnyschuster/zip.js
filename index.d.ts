@@ -328,6 +328,60 @@ declare class CodecStream extends TransformStream {}
 export function getMimeType(fileExtension: string): string;
 
 /**
+ * A `TransformStream`-like temporary buffer returned by a {@link ZipWriterConstructorOptions.createTempStream} factory.
+ */
+export interface TempStream {
+  /**
+   * The writable side, receiving the compressed data of a buffered entry.
+   */
+  writable: WritableStream;
+  /**
+   * The readable side, replayed into the final zip stream once the entry is ready.
+   */
+  readable: ReadableStream;
+  /**
+   * Optional cleanup, called once the entry has been processed (on success, error, or abort) to release any backing resource.
+   */
+  dispose?: () => void | Promise<void>;
+}
+
+/**
+ * Options for {@link createOPFSTempStream}.
+ */
+export interface OPFSTempStreamOptions {
+  /**
+   * Spill a buffered entry to a file once its buffered data exceeds this size, in bytes. Smaller entries stay in memory.
+   *
+   * @defaultValue 1048576
+   */
+  thresholdBytes?: number;
+  /**
+   * Name of the OPFS sub-directory holding the temporary files.
+   *
+   * @defaultValue ".zip.js-temp"
+   */
+  directoryName?: string;
+  /**
+   * Returns (or resolves to) the root `FileSystemDirectoryHandle`. Defaults to `navigator.storage.getDirectory()`.
+   *
+   * Provide it to run inside a worker with a pre-obtained handle, or to test against a mock.
+   */
+  getDirectory?: () => FileSystemDirectoryHandle | Promise<FileSystemDirectoryHandle>;
+}
+
+/**
+ * Builds a {@link ZipWriterConstructorOptions.createTempStream} factory that spills the data of buffered entries to the Origin Private File System (OPFS) instead of keeping it in memory.
+ *
+ * An entry stays in memory until it exceeds `thresholdBytes`, then spills to a temporary OPFS file that is streamed back and deleted afterwards, so peak memory stays bounded on large buffered entries.
+ *
+ * OPFS is a browser/worker feature; feature-detect `navigator.storage.getDirectory` (or pass `getDirectory`) before using it, and let the writer use its in-memory default elsewhere.
+ *
+ * @param options The options.
+ * @returns A factory suitable for {@link ZipWriterConstructorOptions.createTempStream}.
+ */
+export function createOPFSTempStream(options?: OPFSTempStreamOptions): () => Promise<TempStream>;
+
+/**
  * Represents an instance used to read or write unknown type of data.
  *
  * zip.js can handle multiple types of data thanks to a generic API. This feature is based on 2 abstract constructors: {@link Reader} and {@link Writer}.
@@ -1486,8 +1540,11 @@ export interface ZipWriterConstructorOptions extends WorkerConfiguration {
    *
    * When provided, this replaces the default in-memory `TransformStream` buffer, allowing data to be stored externally (e.g. filesystem, OPFS, network).
    * The `writable` side receives compressed entry data. The `readable` side is consumed when the entry is replayed into the final zip stream.
+   * The optional `dispose` method is called once the entry has been processed (on success, error, or abort) so a resource-backed buffer can release its resource.
+   *
+   * See {@link createOPFSTempStream} for a ready-made OPFS-backed implementation.
    */
-  createTempStream?: () => Promise<{ writable: WritableStream; readable: ReadableStream }>;
+  createTempStream?: () => TempStream | Promise<TempStream>;
   /**
    * `true` to keep the order of the entry physically in the zip file.
    *
