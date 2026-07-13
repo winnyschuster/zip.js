@@ -5117,7 +5117,7 @@
 		if (!useCompressionStream && (zipWriter.config.CompressionStream === UNDEFINED_VALUE && zipWriter.config.CompressionStreamZlib === UNDEFINED_VALUE)) {
 			level = 0;
 		}
-		let zip64 = getOptionValue(zipWriter, options, PROPERTY_NAME_ZIP64);
+		const zip64 = getOptionValue(zipWriter, options, PROPERTY_NAME_ZIP64);
 		if (!zipCrypto && (password !== UNDEFINED_VALUE || rawPassword !== UNDEFINED_VALUE) && !(encryptionStrength >= 1 && encryptionStrength <= 3)) {
 			throw new Error(ERR_INVALID_ENCRYPTION_STRENGTH);
 		}

@@ -5113,7 +5113,7 @@
 		if (!useCompressionStream && (zipWriter.config.CompressionStream === UNDEFINED_VALUE && zipWriter.config.CompressionStreamZlib === UNDEFINED_VALUE)) {
 			level = 0;
 		}
-		let zip64 = getOptionValue(zipWriter, options, PROPERTY_NAME_ZIP64);
+		const zip64 = getOptionValue(zipWriter, options, PROPERTY_NAME_ZIP64);
 		if (!zipCrypto && (password !== UNDEFINED_VALUE || rawPassword !== UNDEFINED_VALUE) && !(encryptionStrength >= 1 && encryptionStrength <= 3)) {
 			throw new Error(ERR_INVALID_ENCRYPTION_STRENGTH);
 		}
@@ -6495,13 +6495,17 @@
 				name,
 				data: params.data,
 				options: params.options,
-				id: fs.entries.length,
+				id: fs.entryIdCounter++,
 				parent,
 				children: [],
 				uncompressedSize: params.uncompressedSize || 0,
 				passThrough: params.passThrough
 			});
-			fs.entries.push(zipEntry);
+			// detached entries (e.g. clones) are not registered until they are attached,
+			// otherwise they could never be garbage collected
+			if (parent || !fs.root) {
+				fs.entries[zipEntry.id] = zipEntry;
+			}
 			if (parent) {
 				zipEntry.parent.children.push(zipEntry);
 			}
@@ -6973,6 +6977,7 @@
 								detach(entry);
 								entry.parent = destination;
 								destination.children.push(entry);
+								registerEntries(this, entry);
 							}
 						}
 					} else {
@@ -7386,7 +7391,19 @@
 
 	function resetFS(fs) {
 		fs.entries = [];
+		fs.entryIdCounter = 0;
 		fs.root = new ZipDirectoryEntry(fs);
+	}
+
+	function registerEntries(fs, entry) {
+		const pendingEntries = [entry];
+		while (pendingEntries.length) {
+			const pendingEntry = pendingEntries.pop();
+			fs.entries[pendingEntry.id] = pendingEntry;
+			for (const child of pendingEntry.children) {
+				pendingEntries.push(child);
+			}
+		}
 	}
 
 	function addChild(parent, name, params, directory) {
