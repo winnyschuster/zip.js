@@ -2300,7 +2300,9 @@
 					if (zipCrypto.password || zipCrypto.rawPassword) {
 						const decryptedHeader = decrypt(zipCrypto, chunk.subarray(0, HEADER_LENGTH));
 						zipCrypto.password = zipCrypto.rawPassword = null;
-						if (decryptedHeader.at(-1) != zipCrypto.passwordVerification) {
+						// verify the password with a branch-free comparison of the verification byte, mirroring
+						// the constant-time AES HMAC signature check
+						if ((decryptedHeader.at(-1) ^ zipCrypto.passwordVerification) != 0) {
 							throw new Error(ERR_INVALID_PASSWORD);
 						}
 						chunk = chunk.subarray(HEADER_LENGTH);
