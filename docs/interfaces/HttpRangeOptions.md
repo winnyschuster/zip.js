@@ -6,7 +6,7 @@
 
 # Interface: HttpRangeOptions
 
-Defined in: [index.d.ts:496](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L496)
+Defined in: [index.d.ts:504](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L504)
 
 Represents options passed to the constructor of [HttpRangeReader](../classes/HttpRangeReader.md) and [HttpReader](../classes/HttpReader.md).
 
@@ -20,7 +20,7 @@ Represents options passed to the constructor of [HttpRangeReader](../classes/Htt
 
 > `optional` **headers?**: `Iterable`\<\[`string`, `string`\], `any`, `any`\> \| `Map`\<`string`, `string`\>
 
-Defined in: [index.d.ts:506](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L506)
+Defined in: [index.d.ts:522](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L522)
 
 The HTTP headers.
 
@@ -30,7 +30,7 @@ The HTTP headers.
 
 > `optional` **useXHR?**: `boolean`
 
-Defined in: [index.d.ts:502](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L502)
+Defined in: [index.d.ts:510](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L510)
 
 `true` to rely `XMLHttpRequest` instead of `fetch` to fetch data.
 
@@ -39,3 +39,33 @@ Defined in: [index.d.ts:502](https://github.com/gildas-lormeau/zip.js/blob/54845
 ```ts
 false
 ```
+
+## Methods
+
+### fetch()?
+
+> `optional` **fetch**(`input`, `init?`): `Promise`\<`Response`\>
+
+Defined in: [index.d.ts:518](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L518)
+
+The function used to fetch the data. It takes precedence over [HttpRangeOptions#useXHR](#usexhr)
+when set. The returned object must expose the `status`, `statusText` and `headers` properties,
+and the `arrayBuffer()` method of the `Response` class.
+
+#### Parameters
+
+##### input
+
+`string`
+
+##### init?
+
+`RequestInit`
+
+#### Returns
+
+`Promise`\<`Response`\>
+
+#### Default Value
+
+`fetch`

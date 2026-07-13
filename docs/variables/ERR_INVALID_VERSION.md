@@ -8,6 +8,6 @@
 
 > `const` **ERR\_INVALID\_VERSION**: `string`
 
-Defined in: [index.d.ts:2315](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L2315)
+Defined in: [index.d.ts:2401](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L2401)
 
 Invalid version error

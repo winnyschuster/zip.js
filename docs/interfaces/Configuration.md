@@ -6,7 +6,7 @@
 
 # Interface: Configuration
 
-Defined in: [index.d.ts:203](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L203)
+Defined in: [index.d.ts:203](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L203)
 
 Represents the configuration passed to [configure](../functions/configure.md).
 
@@ -20,7 +20,7 @@ Represents the configuration passed to [configure](../functions/configure.md).
 
 > `optional` **chunkSize?**: `number`
 
-Defined in: [index.d.ts:253](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L253)
+Defined in: [index.d.ts:261](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L261)
 
 The size of the chunks in bytes during data compression/decompression.
 
@@ -36,7 +36,7 @@ The size of the chunks in bytes during data compression/decompression.
 
 > `optional` **CompressionStream?**: *typeof* [`TransformStreamLike`](../classes/TransformStreamLike.md)
 
-Defined in: [index.d.ts:259](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L259)
+Defined in: [index.d.ts:267](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L267)
 
 The stream implementation used to compress data when `useCompressionStream` is set to `true`.
 
@@ -50,7 +50,7 @@ The stream implementation used to compress data when `useCompressionStream` is s
 
 > `optional` **CompressionStreamZlib?**: *typeof* [`TransformStreamLike`](../classes/TransformStreamLike.md)
 
-Defined in: [index.d.ts:271](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L271)
+Defined in: [index.d.ts:279](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L279)
 
 The stream implementation used to compress data when `useCompressionStream` is set to `false`.
 
@@ -64,7 +64,7 @@ The stream implementation used to compress data when `useCompressionStream` is s
 
 > `optional` **DecompressionStream?**: *typeof* [`TransformStreamLike`](../classes/TransformStreamLike.md)
 
-Defined in: [index.d.ts:265](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L265)
+Defined in: [index.d.ts:273](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L273)
 
 The stream implementation used to decompress data when `useCompressionStream` is set to `true`.
 
@@ -78,7 +78,7 @@ The stream implementation used to decompress data when `useCompressionStream` is
 
 > `optional` **DecompressionStreamZlib?**: *typeof* [`TransformStreamLike`](../classes/TransformStreamLike.md)
 
-Defined in: [index.d.ts:277](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L277)
+Defined in: [index.d.ts:285](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L285)
 
 The stream implementation used to decompress data when `useCompressionStream` is set to `false`.
 
@@ -92,7 +92,7 @@ The stream implementation used to decompress data when `useCompressionStream` is
 
 > `optional` **maxWorkers?**: `number`
 
-Defined in: [index.d.ts:209](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L209)
+Defined in: [index.d.ts:209](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L209)
 
 The maximum number of web workers used to compress/decompress data simultaneously.
 
@@ -106,7 +106,7 @@ The maximum number of web workers used to compress/decompress data simultaneousl
 
 > `optional` **terminateWorkerTimeout?**: `number`
 
-Defined in: [index.d.ts:215](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L215)
+Defined in: [index.d.ts:215](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L215)
 
 The delay in milliseconds before idle web workers are automatically terminated. You can call `terminateWorkers()` to terminate idle workers.
 
@@ -122,7 +122,7 @@ The delay in milliseconds before idle web workers are automatically terminated. 
 
 > `optional` **transferStreams?**: `boolean`
 
-Defined in: [index.d.ts:301](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L301)
+Defined in: [index.d.ts:309](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L309)
 
 `true` to transfer stream ownership to web workers.
 
@@ -142,7 +142,7 @@ true
 
 > `optional` **useCompressionStream?**: `boolean`
 
-Defined in: [index.d.ts:295](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L295)
+Defined in: [index.d.ts:303](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L303)
 
 `true` to use the native API `CompressionStream`/`DecompressionStream` to compress/decompress data.
 
@@ -162,7 +162,7 @@ true
 
 > `optional` **useWebWorkers?**: `boolean`
 
-Defined in: [index.d.ts:289](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L289)
+Defined in: [index.d.ts:297](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L297)
 
 `true` to use web workers to compress/decompress data in non-blocking background processes.
 
@@ -182,7 +182,7 @@ true
 
 > `optional` **wasmURI?**: `string`
 
-Defined in: [index.d.ts:247](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L247)
+Defined in: [index.d.ts:255](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L255)
 
 The URI of the WebAssembly module used by default implementations to compress/decompress data. It is ignored if `useCompressionStream` is set to `true` and `CompressionStream`/`DecompressionStream` are supported by the environment.
 
@@ -203,11 +203,29 @@ configure({
 
 ***
 
+### workerStarvationTimeout?
+
+> `optional` **workerStarvationTimeout?**: `number`
+
+Defined in: [index.d.ts:223](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L223)
+
+The delay in milliseconds after which the oldest pending compression/decompression task is run without a web worker when no task completes.
+
+It prevents deadlocks when entries read from a `ZipReader` are added concurrently into a `ZipWriter` and all the web workers are waiting for data.
+
+#### Default Value
+
+```ts
+5000
+```
+
+***
+
 ### workerURI?
 
 > `optional` **workerURI?**: `string`
 
-Defined in: [index.d.ts:232](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L232)
+Defined in: [index.d.ts:240](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L240)
 
 The URI of the web worker.
 

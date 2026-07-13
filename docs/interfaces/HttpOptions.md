@@ -6,7 +6,7 @@
 
 # Interface: HttpOptions
 
-Defined in: [index.d.ts:465](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L465)
+Defined in: [index.d.ts:473](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L473)
 
 Represents the options passed to the constructor of [HttpReader](../classes/HttpReader.md).
 
@@ -24,7 +24,7 @@ Represents the options passed to the constructor of [HttpReader](../classes/Http
 
 > `optional` **combineSizeEocd?**: `boolean`
 
-Defined in: [index.d.ts:490](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L490)
+Defined in: [index.d.ts:498](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L498)
 
 `true` to use `Range: bytes=-22` on the first request and cache the EOCD, make sure beforehand that the server supports a suffix range request.
 
@@ -40,7 +40,7 @@ false
 
 > `optional` **forceRangeRequests?**: `boolean`
 
-Defined in: [index.d.ts:477](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L477)
+Defined in: [index.d.ts:485](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L485)
 
 `true` to always use `Range` headers when fetching data.
 
@@ -56,7 +56,7 @@ false
 
 > `optional` **headers?**: `Iterable`\<\[`string`, `string`\], `any`, `any`\> \| `Map`\<`string`, `string`\>
 
-Defined in: [index.d.ts:506](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L506)
+Defined in: [index.d.ts:522](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L522)
 
 The HTTP headers.
 
@@ -70,7 +70,7 @@ The HTTP headers.
 
 > `optional` **preventHeadRequest?**: `boolean`
 
-Defined in: [index.d.ts:484](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L484)
+Defined in: [index.d.ts:492](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L492)
 
 `true` to prevent using `HEAD` HTTP request in order the get the size of the content.
 `false` to explicitly use `HEAD`, this is useful in case of CORS where `Access-Control-Expose-Headers: Content-Range` is not returned by the server.
@@ -87,7 +87,7 @@ false
 
 > `optional` **useRangeHeader?**: `boolean`
 
-Defined in: [index.d.ts:471](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L471)
+Defined in: [index.d.ts:479](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L479)
 
 `true` to use `Range` headers when fetching data from servers returning `Accept-Ranges` headers.
 
@@ -103,7 +103,7 @@ false
 
 > `optional` **useXHR?**: `boolean`
 
-Defined in: [index.d.ts:502](https://github.com/gildas-lormeau/zip.js/blob/5484569bd1fe28423166efd99cd7ee7147ada8d8/index.d.ts#L502)
+Defined in: [index.d.ts:510](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L510)
 
 `true` to rely `XMLHttpRequest` instead of `fetch` to fetch data.
 
@@ -116,3 +116,37 @@ false
 #### Inherited from
 
 [`HttpRangeOptions`](HttpRangeOptions.md).[`useXHR`](HttpRangeOptions.md#usexhr)
+
+## Methods
+
+### fetch()?
+
+> `optional` **fetch**(`input`, `init?`): `Promise`\<`Response`\>
+
+Defined in: [index.d.ts:518](https://github.com/gildas-lormeau/zip.js/blob/9b8df6d764cb40dbf4ab59d093091fe62ec48303/index.d.ts#L518)
+
+The function used to fetch the data. It takes precedence over [HttpRangeOptions#useXHR](HttpRangeOptions.md#usexhr)
+when set. The returned object must expose the `status`, `statusText` and `headers` properties,
+and the `arrayBuffer()` method of the `Response` class.
+
+#### Parameters
+
+##### input
+
+`string`
+
+##### init?
+
+`RequestInit`
+
+#### Returns
+
+`Promise`\<`Response`\>
+
+#### Default Value
+
+`fetch`
+
+#### Inherited from
+
+[`HttpRangeOptions`](HttpRangeOptions.md).[`fetch`](HttpRangeOptions.md#fetch)
