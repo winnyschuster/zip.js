@@ -114,6 +114,7 @@ export default ([
 	{ title: "Zip64 (buffered)", script: "./test-zip64-buffered.js" },
 	{ title: "Zip64 crypto", script: "./test-zip64-crypto.js" },
 	{ title: "Zip64 (no compression)", script: "./test-zip64-no-compression.js" },
+	{ title: "Zip64 (local compressed size)", script: "./test-zip64-local-compressed-size.js" },
 	{ title: "Zip64 (passthrough)", script: "./test-zip64-passthrough.js" },
 	{ title: "Zip64 (streamed local extra field)", script: "./test-zip64-stream-local-field.js" },
 	{ title: "Zip64", script: "./test-zip64.js" },
