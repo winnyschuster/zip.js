@@ -5182,6 +5182,7 @@
 		let writingBufferedEntryData;
 		let writingEntryData;
 		let writerSizeBeforeEntry;
+		let flushedBufferedSize = 0;
 		let fileWriter;
 		files.set(name, fileEntry);
 		zipWriter.lastFileEntry = fileEntry;
@@ -5206,7 +5207,7 @@
 				await requestLockWriter();
 			}
 			await initStream(fileWriter);
-			const { writable, diskOffset } = writer;
+			const { diskOffset } = writer;
 			if (zipWriter.addSplitZipSignature) {
 				delete zipWriter.addSplitZipSignature;
 				const signatureArray = new Uint8Array(4);
@@ -5250,7 +5251,7 @@
 				fileEntry.offset = getSegmentOffset(zipWriter, writer);
 				updateLocalHeader(fileEntry, localHeaderView, options);
 				await writeData(writer, localHeaderArray);
-				await fileWriter.readable.pipeTo(writable, { preventClose: true, preventAbort: true, signal });
+				await flushBufferedData(fileWriter.readable, writer, signal, chunkLength => flushedBufferedSize += chunkLength);
 				writer.size += fileWriter.size;
 				writingBufferedEntryData = false;
 			} else {
@@ -5271,7 +5272,10 @@
 				}
 				zipWriter.offset += writer.size - writerSizeBeforeEntry;
 				if (bufferedWrite) {
-					zipWriter.offset += fileWriter.size;
+					// advance by the bytes that actually reached the writer, not the full buffered size:
+					// a flush aborted mid-stream only wrote flushedBufferedSize bytes, and over-counting
+					// here would corrupt the offsets of every subsequent entry
+					zipWriter.offset += flushedBufferedSize;
 				}
 			}
 			files.delete(name);
@@ -6124,6 +6128,24 @@
 			await streamWriter.ready;
 			writer.size += getLength(array);
 			await streamWriter.write(array);
+		} finally {
+			streamWriter.releaseLock();
+		}
+	}
+
+	// Flushes a buffered entry's data into the writer, reporting each written chunk's length through
+	// onChunkWritten() so the failure-recovery code knows how many bytes actually reached the writer
+	// when the flush is aborted mid-stream. onChunkWritten() runs only after a chunk has been written.
+	async function flushBufferedData(readable, writer, signal, onChunkWritten) {
+		const streamWriter = writer.writable.getWriter();
+		try {
+			await readable.pipeTo(new WritableStream({
+				async write(chunk) {
+					await streamWriter.ready;
+					await streamWriter.write(chunk);
+					onChunkWritten(getLength(chunk));
+				}
+			}), { preventClose: true, preventAbort: true, signal });
 		} finally {
 			streamWriter.releaseLock();
 		}
