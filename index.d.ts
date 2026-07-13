@@ -509,6 +509,14 @@ export interface HttpRangeOptions {
    */
   useXHR?: boolean;
   /**
+   * The function used to fetch the data. It takes precedence over {@link HttpRangeOptions#useXHR}
+   * when set. The returned object must expose the `status`, `statusText` and `headers` properties,
+   * and the `arrayBuffer()` method of the `Response` class.
+   *
+   * @defaultValue `fetch`
+   */
+  fetch?(input: string, init?: RequestInit): Promise<Response>;
+  /**
    * The HTTP headers.
    */
   headers?: Iterable<[string, string]> | Map<string, string>;
