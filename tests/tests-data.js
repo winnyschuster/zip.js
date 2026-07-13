@@ -35,6 +35,7 @@ export default ([
 	{ title: "Deflate64", script: "./test-deflate64.js" },
 	{ title: "Detect directory executable", script: "./test-detect-directory-exec.js" },
 	{ title: "Directory", script: "./test-directory.js" },
+	{ title: "Directory flag (unicode path override)", script: "./test-directory-flag-unicode-path.js" },
 	{ title: "Executable", script: "./test-executable.js" },
 	{ title: "Duplicated Filename", script: "./test-duplicated-filename.js" },
 	{ title: "Empty zip file", script: "./test-empty.js" },
