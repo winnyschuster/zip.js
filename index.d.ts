@@ -1259,7 +1259,8 @@ export class ZipWriterStream {
   /**
    * Returns an object containing a readable and writable property for the .pipeThrough method
    *
-   * @param path The name of the stream when unzipped.
+   * @param path The name of the stream when unzipped. Paths must use forward slashes ("/") as
+   * separator (see {@link ZipWriter#add}).
    * @returns An object containing readable and writable properties
    */
   transform<T>(path: string): {
@@ -1270,7 +1271,8 @@ export class ZipWriterStream {
   /**
    * Returns a WritableStream for the .pipeTo method
    *
-   * @param path The directory path of where the stream should exist in the zipped stream.
+   * @param path The directory path of where the stream should exist in the zipped stream. Paths
+   * must use forward slashes ("/") as separator (see {@link ZipWriter#add}).
    * @returns A WritableStream.
    */
   writable<T>(path: string): WritableStream<T>;
@@ -1351,7 +1353,10 @@ export class ZipWriter<Type> {
   /**
    * Adds an entry into the zip file
    *
-   * @param filename The filename of the entry.
+   * @param filename The filename of the entry. Paths must use forward slashes ("/") as separator,
+   * as required by section 4.4.17.1 of the zip specification. The value is stored as-is; in
+   * particular, Windows path separators ("\\") are not converted and become part of the filename,
+   * which is interpreted inconsistently by zip tools.
    * @param reader The  {@link Reader} instance used to read the content of the entry.
    * @param options The options.
    * @returns A promise resolving to an {@link EntryMetaData} instance.
