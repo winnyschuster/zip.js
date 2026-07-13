@@ -2,6 +2,7 @@ export default ([
 	{ title: "Abort signal (read)", script: "./test-abort-signal-read.js" },
 	{ title: "Abort signal (worker reuse)", script: "./test-worker-reuse-after-abort.js" },
 	{ title: "Abort signal (write)", script: "./test-abort-signal-write.js" },
+	{ title: "Abort signal (buffered flush offset)", script: "./test-abort-buffered-flush-offset.js" },
 	{ title: "Append to zip", script: "./test-append-to-zip.js" },
 	{ title: "Append to zip (central directory metadata)", script: "./test-prepend-zip-metadata.js" },
 	{ title: "Uint8Array", script: "./test-array.js" },
