@@ -3876,7 +3876,7 @@
 					internalFileAttribute: fileEntry.internalFileAttributes,
 					externalFileAttribute: fileEntry.externalFileAttributes,
 					executable,
-					directory: modeIsDir || upperIsDir || (msDosCompatible && msdosAttributes.directory) || (filename.endsWith(DIRECTORY_SIGNATURE) && !fileEntry.uncompressedSize),
+					directory: modeIsDir || upperIsDir || (msDosCompatible && msdosAttributes.directory) || (fileEntry.filename.endsWith(DIRECTORY_SIGNATURE) && !fileEntry.uncompressedSize),
 					zipCrypto: fileEntry.encrypted && !fileEntry.extraFieldAES
 				});
 				const entry = new Entry(fileEntry);
@@ -4325,31 +4325,29 @@
 	function readExtraFieldUnix(extraField, directory, isInfoZip) {
 		try {
 			const view = getDataView$1(new Uint8Array(extraField.data));
-			let offset = 0;
-			const version = getUint8(view, offset++);
-			const uidSize = getUint8(view, offset++);
-			const uidBytes = extraField.data.subarray(offset, offset + uidSize);
-			offset += uidSize;
-			const uid = unpackUnixId(uidBytes);
-			const gidSize = getUint8(view, offset++);
-			const gidBytes = extraField.data.subarray(offset, offset + gidSize);
-			offset += gidSize;
-			const gid = unpackUnixId(gidBytes);
-			let unixMode = UNDEFINED_VALUE;
-			if (!isInfoZip && offset + 2 <= extraField.data.length) {
-				const base = extraField.data;
-				const modeView = new DataView(base.buffer, base.byteOffset + offset, 2);
-				unixMode = modeView.getUint16(0, true);
+			let uid, gid;
+			if (isInfoZip) {
+				// Info-ZIP New Unix "ux" field (0x7875): version + variable-length uid/gid
+				let offset = 0;
+				const version = getUint8(view, offset++);
+				const uidSize = getUint8(view, offset++);
+				uid = unpackUnixId(extraField.data.subarray(offset, offset + uidSize));
+				offset += uidSize;
+				const gidSize = getUint8(view, offset++);
+				gid = unpackUnixId(extraField.data.subarray(offset, offset + gidSize));
+				Object.assign(extraField, { version, uid, gid });
+			} else if (extraField.data.length >= 4) {
+				// Info-ZIP Unix "Ux" field (0x7855): fixed 2-byte uid + gid (the file mode, if any, is
+				// carried in the external file attributes, not here)
+				uid = getUint16(view, 0);
+				gid = getUint16(view, 2);
+				Object.assign(extraField, { uid, gid });
 			}
-			Object.assign(extraField, { version, uid, gid, unixMode });
 			if (uid !== UNDEFINED_VALUE) {
 				directory.uid = uid;
 			}
 			if (gid !== UNDEFINED_VALUE) {
 				directory.gid = gid;
-			}
-			if (unixMode !== UNDEFINED_VALUE) {
-				directory.unixMode = unixMode;
 			}
 		} catch {
 			// ignored
@@ -4579,6 +4577,7 @@
 	const ERR_INVALID_GID = "Invalid gid (must be integer 0..2^32-1)";
 	const ERR_INVALID_UNIX_MODE = "Invalid UNIX mode (must be integer 0..65535)";
 	const ERR_INVALID_UNIX_EXTRA_FIELD_TYPE = "Invalid unixExtraFieldType (must be 'infozip' or 'unix')";
+	const ERR_INVALID_UNIX_ID_SIZE = "uid/gid must be 0..65535 for unixExtraFieldType 'unix' (use 'infozip' for larger ids)";
 	const ERR_INVALID_MSDOS_ATTRIBUTES = "Invalid msdosAttributesRaw (must be integer 0..255)";
 	const ERR_INVALID_MSDOS_DATA = "Invalid msdosAttributes (must be an object with boolean flags)";
 
@@ -4659,10 +4658,6 @@
 				const extraFieldLength = getLength(rawExtraFieldZip64, rawExtraFieldAES, rawExtraFieldExtendedTimestamp, rawExtraFieldNTFS, rawExtraFieldUnix, rawExtraField);
 				const zip64UncompressedSize = zip64 && uncompressedSize >= MAX_32_BITS;
 				const zip64CompressedSize = zip64 && compressedSize >= MAX_32_BITS;
-				// getBitFlag interprets its `level` argument as a 0-9 compression level, but the reader
-				// hands back the raw 2-bit compression-level field (0-3) it decoded from the general
-				// purpose flag. Re-deriving the flag would collapse every deflated entry to "super fast";
-				// preserve the original level bits verbatim instead.
 				const bitFlagValue = (getBitFlag(level, languageEncodingFlag, dataDescriptor, encrypted, compressionMethod) & ~BITFLAG_LEVEL) | (level << 1);
 				const {
 					headerArray,
@@ -4897,6 +4892,12 @@
 		if (unixExtraFieldType !== UNDEFINED_VALUE && unixExtraFieldType !== INFOZIP_EXTRA_FIELD_TYPE && unixExtraFieldType !== UNIX_EXTRA_FIELD_TYPE) {
 			throw new Error(ERR_INVALID_UNIX_EXTRA_FIELD_TYPE);
 		}
+		// the Info-ZIP Unix "Ux" field (0x7855) stores uid/gid as fixed 2-byte values; larger ids need
+		// the Info-ZIP New Unix "ux" field (0x7875), selected with unixExtraFieldType 'infozip'
+		if (unixExtraFieldType === UNIX_EXTRA_FIELD_TYPE &&
+			((uid !== UNDEFINED_VALUE && uid > MAX_16_BITS) || (gid !== UNDEFINED_VALUE && gid > MAX_16_BITS))) {
+			throw new Error(ERR_INVALID_UNIX_ID_SIZE);
+		}
 		let msdosAttributesRaw = getOptionValue(zipWriter, options, PROPERTY_NAME_MSDOS_ATTRIBUTES_RAW);
 		let msdosAttributes = getOptionValue(zipWriter, options, PROPERTY_NAME_MSDOS_ATTRIBUTES);
 		const hasUnixMetadata = uid !== UNDEFINED_VALUE || gid !== UNDEFINED_VALUE || unixMode !== UNDEFINED_VALUE || unixExtraFieldType;
@@ -5055,6 +5056,7 @@
 			let offset = 0;
 			extraField.forEach(data => extraFieldSize += 4 + getLength(data));
 			rawExtraField = new Uint8Array(extraFieldSize);
+			const rawExtraFieldView = getDataView(rawExtraField);
 			extraField.forEach((data, type) => {
 				if (type > MAX_16_BITS) {
 					throw new Error(ERR_INVALID_EXTRAFIELD_TYPE);
@@ -5062,8 +5064,10 @@
 				if (getLength(data) > MAX_16_BITS) {
 					throw new Error(ERR_INVALID_EXTRAFIELD_DATA);
 				}
-				arraySet(rawExtraField, new Uint16Array([type]), offset);
-				arraySet(rawExtraField, new Uint16Array([getLength(data)]), offset + 2);
+				// the tag and length are 16-bit little-endian; writing them through a Uint16Array with
+				// arraySet would truncate each to a single byte (Uint8Array.set converts element-wise)
+				setUint16(rawExtraFieldView, offset, type);
+				setUint16(rawExtraFieldView, offset + 2, getLength(data));
 				arraySet(rawExtraField, data, offset + 4);
 				offset += 4 + getLength(data);
 			});
@@ -5512,22 +5516,12 @@
 			uncompressedSize
 		} = options;
 		let { version, compressionMethod } = options;
-		// Whether the data is actually deflated must agree with the compression method written to the
-		// header. An explicit method is authoritative (STORE never compresses, DEFLATE always does,
-		// whatever the level); only when no method is given does the level decide (compress unless it is
-		// zero). Otherwise {compressionMethod:0, level:9} would deflate data labeled STORE and
-		// {compressionMethod:8, level:0} would store data labeled DEFLATE, both unreadable.
 		const compressed = !directory && (compressionMethod === UNDEFINED_VALUE
 			? (level === UNDEFINED_VALUE || level > 0)
 			: compressionMethod !== COMPRESSION_METHOD_STORE);
 		let rawLocalExtraFieldZip64;
 		const uncompressedFile = passThrough || !compressed;
 		const zip64ExtraFieldComplete = zip64 && (options.bufferedWrite || ((!zip64UncompressedSize && !zip64CompressedSize) || uncompressedFile));
-		// The local zip64 extra field must be present whenever the entry uses 8-byte size fields:
-		// per APPNOTE 4.3.9.2 its presence is what tells a streaming reader that the data descriptor
-		// holds 8-byte (rather than 4-byte) sizes. When the sizes aren't known yet (streaming with a
-		// data descriptor) the field is still written with its size slots left as zero; the real
-		// values are then written in the data descriptor and the central directory.
 		const writeLocalExtraFieldZip64 = zip64ExtraFieldComplete || (zip64 && dataDescriptor && (zip64UncompressedSize || zip64CompressedSize));
 		if (zip64) {
 			const length = 4 + (zip64UncompressedSize ? 8 : 0) + (zip64CompressedSize ? 8 : 0);
@@ -5601,36 +5595,29 @@
 		}
 		let rawExtraFieldUnix;
 		try {
-			const { uid, gid, unixMode, setuid, setgid, sticky, unixExtraFieldType } = options;
-			if (unixExtraFieldType && (uid !== UNDEFINED_VALUE || gid !== UNDEFINED_VALUE || unixMode !== UNDEFINED_VALUE)) {
+			const { uid, gid, unixExtraFieldType } = options;
+			if (unixExtraFieldType == INFOZIP_EXTRA_FIELD_TYPE && (uid !== UNDEFINED_VALUE || gid !== UNDEFINED_VALUE)) {
+				// Info-ZIP New Unix "ux" field (0x7875): version + variable-length uid/gid, up to 32 bits
 				const uidBytes = packUnixId(uid);
 				const gidBytes = packUnixId(gid);
-				let modeArray = new Uint8Array();
-				if (unixExtraFieldType == UNIX_EXTRA_FIELD_TYPE && unixMode !== UNDEFINED_VALUE) {
-					let modeToWrite = unixMode & MAX_16_BITS;
-					if (setuid) {
-						modeToWrite |= FILE_ATTR_UNIX_SETUID_MASK;
-					}
-					if (setgid) {
-						modeToWrite |= FILE_ATTR_UNIX_SETGID_MASK;
-					}
-					if (sticky) {
-						modeToWrite |= FILE_ATTR_UNIX_STICKY_MASK;
-					}
-					modeArray = new Uint8Array(2);
-					const modeDataView = new DataView(modeArray.buffer);
-					modeDataView.setUint16(0, modeToWrite, true);
-				}
-				const payloadLength = 3 + uidBytes.length + gidBytes.length + modeArray.length;
+				const payloadLength = 3 + uidBytes.length + gidBytes.length;
 				const extraFieldUnix = createRecordWriter(4 + payloadLength);
-				extraFieldUnix.uint16(unixExtraFieldType == INFOZIP_EXTRA_FIELD_TYPE ? EXTRAFIELD_TYPE_INFOZIP : EXTRAFIELD_TYPE_UNIX);
+				extraFieldUnix.uint16(EXTRAFIELD_TYPE_INFOZIP);
 				extraFieldUnix.uint16(payloadLength);
 				extraFieldUnix.uint8(1);
 				extraFieldUnix.uint8(uidBytes.length);
 				extraFieldUnix.bytes(uidBytes);
 				extraFieldUnix.uint8(gidBytes.length);
 				extraFieldUnix.bytes(gidBytes);
-				extraFieldUnix.bytes(modeArray);
+				rawExtraFieldUnix = extraFieldUnix.array;
+			} else if (unixExtraFieldType == UNIX_EXTRA_FIELD_TYPE && (uid !== UNDEFINED_VALUE || gid !== UNDEFINED_VALUE)) {
+				// Info-ZIP Unix "Ux" field (0x7855): fixed 2-byte uid + gid. The file mode is not part of
+				// this field; it is carried in the external file attributes (see below).
+				const extraFieldUnix = createRecordWriter(8);
+				extraFieldUnix.uint16(EXTRAFIELD_TYPE_UNIX);
+				extraFieldUnix.uint16(4);
+				extraFieldUnix.uint16((uid === UNDEFINED_VALUE ? 0 : uid) & MAX_16_BITS);
+				extraFieldUnix.uint16((gid === UNDEFINED_VALUE ? 0 : gid) & MAX_16_BITS);
 				rawExtraFieldUnix = extraFieldUnix.array;
 			} else {
 				rawExtraFieldUnix = new Uint8Array();
@@ -5681,10 +5668,6 @@
 		localHeader.bytes(rawExtraFieldUnix);
 		localHeader.bytes(rawExtraField);
 		if (dataDescriptor) {
-			// With a data descriptor the sizes live in the descriptor; the local header fields are
-			// zeroed - except for zip64 sizes, which stay as the 0xFFFFFFFF sentinel so the local
-			// zip64 extra field remains valid (APPNOTE 4.5.3: a zip64 sub-field is only present when
-			// its 32-bit field holds the sentinel).
 			if (!zip64CompressedSize) {
 				setUint32(localHeaderView, HEADER_OFFSET_COMPRESSED_SIZE + LOCAL_HEADER_COMMON_OFFSET, 0);
 			}
