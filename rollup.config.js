@@ -49,7 +49,7 @@ const inlineTerserOptions = {
 	},
 	mangle: {
 		properties: {
-			reserved: ["codecType", "config", "salt", "iterations", "keys", "password", "rawPassword", "encryptionStrength", "encrypted", "signed", "compressed", "level", "zipCrypto", "passwordVerification", "pull", "enqueue", "close", "messageId", "chunkSize", "useCompressionStream", "preventAbort", "preventClose", "checkPasswordOnly", "inputSize", "outputSize", "wasmURI", "malloc", "free", "inflate_new", "inflate_init_raw", "inflate_init_gzip", "inflate_init", "inflate_process", "inflate_last_consumed", "inflate_end", "inflate9_new", "inflate9_init_raw", "inflate9_process", "inflate9_last_consumed", "inflate9_end", "deflate_new", "deflate_init_raw", "deflate_init_gzip", "deflate_init", "deflate_process", "deflate_last_consumed", "deflate_end"]
+			reserved: ["codecType", "config", "salt", "iterations", "keys", "password", "rawPassword", "encryptionStrength", "encrypted", "signed", "signature", "compressed", "level", "zipCrypto", "passwordVerification", "deflate64", "pull", "enqueue", "close", "messageId", "chunkSize", "useCompressionStream", "preventAbort", "preventClose", "checkPasswordOnly", "inputSize", "outputSize", "wasmURI", "malloc", "free", "inflate_new", "inflate_init_raw", "inflate_init_gzip", "inflate_init", "inflate_process", "inflate_last_consumed", "inflate_end", "inflate9_new", "inflate9_init_raw", "inflate9_process", "inflate9_last_consumed", "inflate9_end", "deflate_new", "deflate_init_raw", "deflate_init_gzip", "deflate_init", "deflate_process", "deflate_last_consumed", "deflate_end"]
 		}
 	}
 };
