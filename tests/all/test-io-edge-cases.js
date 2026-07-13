@@ -1,4 +1,4 @@
-/* global Uint8Array, Response */
+/* global Response */
 
 import * as zip from "../../index.js";
 

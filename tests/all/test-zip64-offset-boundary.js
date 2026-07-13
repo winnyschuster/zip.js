@@ -1,5 +1,3 @@
-/* global Uint8Array, DataView, BigInt */
-
 import * as zip from "../../index.js";
 
 const TEXT_CONTENT = "content";

@@ -14,10 +14,9 @@ async function test() {
 			const response = await fetch("../data/lorem.zip#lorem.txt");
 			result = await response.text();
 			await unregisterServiceWorker();
-			// eslint-disable-next-line no-unused-vars
-		} catch (_error) {
+		} catch (error) {
 			resetSearch();
-			throw new Error();
+			throw new Error(undefined, { cause: error });
 		}
 		if (TEXT_CONTENT == result) {
 			location.search = "?test-ok";

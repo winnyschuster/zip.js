@@ -13,7 +13,7 @@ async function test() {
 	await zipWriter.close();
 	const zipReader = new zip.ZipReader(new zip.BlobReader(await blobWriter.getData()), { checkPasswordOnly: true });
 	const entries = await zipReader.getEntries();
-	let data, undefinedData = 42;
+	let data, undefinedData;
 	try {
 		undefinedData = await entries[0].getData();
 	} catch (error) {

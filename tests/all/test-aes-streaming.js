@@ -1,5 +1,3 @@
-/* global Uint8Array */
-
 import { AESEncryptionStream, AESDecryptionStream } from "../../lib/core/streams/aes-crypto-stream.js";
 
 const PASSWORD = "password";

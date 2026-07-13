@@ -1,4 +1,4 @@
-/* global Blob, Uint8Array, DataView */
+/* global Blob */
 
 import * as zip from "../../index.js";
 

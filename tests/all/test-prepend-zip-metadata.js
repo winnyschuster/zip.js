@@ -1,4 +1,4 @@
-/* global Blob, Uint8Array, DataView, TextDecoder */
+/* global Blob, TextDecoder */
 
 import * as zip from "../../index.js";
 

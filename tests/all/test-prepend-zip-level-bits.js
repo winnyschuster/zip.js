@@ -1,5 +1,3 @@
-/* global Blob */
-
 import * as zip from "../../index.js";
 
 export { test };

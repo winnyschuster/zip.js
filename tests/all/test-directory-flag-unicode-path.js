@@ -1,4 +1,4 @@
-/* global Uint8Array, Blob, TextEncoder, DataView */
+/* global Blob, TextEncoder */
 
 import * as zip from "../../index.js";
 
@@ -114,6 +114,6 @@ function craftArchive(rawName, overrideName) {
 	view.setUint16(offset, 1, true); offset += 2;
 	view.setUint32(offset, centralHeaderLength, true); offset += 4;
 	view.setUint32(offset, centralHeaderOffset, true); offset += 4;
-	view.setUint16(offset, 0, true); offset += 2;
+	view.setUint16(offset, 0, true);
 	return out;
 }

@@ -1,4 +1,4 @@
-/* global WritableStream, Uint8Array, TextEncoder, TextDecoder, DataView, Blob */
+/* global WritableStream, TextEncoder, TextDecoder, Blob, AbortController */
 
 import * as zip from "../../index.js";
 

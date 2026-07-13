@@ -1,4 +1,4 @@
-/* global Uint8Array, atob */
+/* global atob */
 
 import * as zip from "../../index.js";
 

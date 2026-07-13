@@ -1,4 +1,4 @@
-/* global Uint8Array, setTimeout */
+/* global setTimeout */
 
 import * as zip from "../../index.js";
 

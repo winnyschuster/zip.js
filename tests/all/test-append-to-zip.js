@@ -25,7 +25,7 @@ async function test() {
 			await zipReader.close();
 			await zip.terminateWorkers();
 			if (files.length != 2 || files[0] !== TEXT_CONTENT || files[1] !== TEXT_CONTENT) {
-				throw new Error();
+				throw new Error(undefined, { cause: error });
 			}
 		} else {
 			throw error;

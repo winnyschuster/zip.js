@@ -1,4 +1,4 @@
-/* global TransformStream, setTimeout, clearTimeout */
+/* global TransformStream, setTimeout, clearTimeout, navigator */
 
 import * as zip from "../../index.js";
 

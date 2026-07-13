@@ -7,9 +7,14 @@ export default [
 			".git/",
 			"dist/",
 			"**/*-inline.js",
+			"lib/core/web-worker-inline-native.js",
+			"lib/core/web-worker-inline-wasm.js",
+			"lib/core/streams/zlib-js/zlib-streams.min.js",
 			"tests/vendor/*.js",
 			"index.cjs",
-			"index.min.js"
+			"index.min.js",
+			"index-native.cjs",
+			"index-native.min.js"
 		]
 	},
 	js.configs.recommended,

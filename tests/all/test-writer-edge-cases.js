@@ -1,4 +1,4 @@
-/* global Uint8Array, TextEncoder, WritableStream */
+/* global TextEncoder, WritableStream */
 
 import * as zip from "../../index.js";
 
