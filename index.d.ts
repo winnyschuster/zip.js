@@ -1561,7 +1561,7 @@ export interface ZipWriterConstructorOptions extends WorkerConfiguration {
   /**
    * `true` to add the signature of the data descriptor.
    *
-   * @defaultValue false
+   * @defaultValue true
    */
   dataDescriptorSignature?: boolean;
   /**
