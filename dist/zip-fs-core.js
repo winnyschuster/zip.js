@@ -481,7 +481,8 @@
 			preventHeadRequest,
 			useRangeHeader,
 			forceRangeRequests,
-			combineSizeEocd
+			combineSizeEocd,
+			fetch
 		} = options;
 		options = Object.assign({}, options);
 		delete options.preventHeadRequest;
@@ -489,13 +490,15 @@
 		delete options.forceRangeRequests;
 		delete options.combineSizeEocd;
 		delete options.useXHR;
+		delete options.fetch;
 		Object.assign(httpReader, {
 			url,
 			options,
 			preventHeadRequest,
 			useRangeHeader,
 			forceRangeRequests,
-			combineSizeEocd
+			combineSizeEocd,
+			fetch
 		});
 	}
 
@@ -630,8 +633,8 @@
 		}
 	}
 
-	async function sendFetchRequest(method, { options, url }, headers) {
-		const response = await fetch(url, Object.assign({}, options, { method, headers }));
+	async function sendFetchRequest(method, { fetch: fetchFunction = fetch, options, url }, headers) {
+		const response = await fetchFunction(url, Object.assign({}, options, { method, headers }));
 		if (response.status < 400) {
 			return response;
 		} else {
@@ -677,7 +680,8 @@
 			super();
 			Object.assign(this, {
 				url,
-				reader: options.useXHR ? new XHRReader(url, options) : new FetchReader(url, options)
+				// an explicit fetch implementation takes precedence over useXHR
+				reader: options.useXHR && !options.fetch ? new XHRReader(url, options) : new FetchReader(url, options)
 			});
 		}
 
