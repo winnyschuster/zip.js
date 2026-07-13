@@ -1,0 +1,15 @@
+{
+  "name": "zip-js-benchmarks",
+  "private": true,
+  "type": "module",
+  "description": "Fair, reproducible benchmarks: @zip.js/zip.js vs jszip, fflate, archiver",
+  "scripts": {
+    "bench": "node bench.js",
+    "corpus": "node lib/corpus.js"
+  },
+  "devDependencies": {
+    "archiver": "^8.0.0",
+    "fflate": "^0.8.3",
+    "jszip": "^3.10.1"
+  }
+}

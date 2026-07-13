@@ -1,0 +1,88 @@
+{
+  "runtime": "v24.12.0",
+  "runs": 3,
+  "workload": "8 files x 8 MB (parallel-friendly)",
+  "baselineRssBytes": 42008576,
+  "rows": [
+    {
+      "label": "zip.js — CompressionStream, sequential",
+      "lib": "zipjs",
+      "medianMs": 2453.0914169999996,
+      "peakRssBytes": 473202688,
+      "outputSize": 19591565,
+      "speedupVsCsSeq": 1
+    },
+    {
+      "label": "zip.js — CompressionStream, parallel",
+      "lib": "zipjs",
+      "medianMs": 657.010083,
+      "peakRssBytes": 518045696,
+      "outputSize": 19591565,
+      "speedupVsCsSeq": 3.7337195888970847
+    },
+    {
+      "label": "zip.js — WASM, sequential",
+      "lib": "zipjs",
+      "medianMs": 4176.1879579999995,
+      "peakRssBytes": 485490688,
+      "outputSize": 19735400,
+      "speedupVsCsSeq": 0.5873996672733091
+    },
+    {
+      "label": "zip.js — WASM, parallel",
+      "lib": "zipjs",
+      "medianMs": 4174.711583,
+      "peakRssBytes": 504725504,
+      "outputSize": 19735400,
+      "speedupVsCsSeq": 0.5876073995121783
+    },
+    {
+      "label": "zip.js — pure-JS, sequential",
+      "lib": "zipjs",
+      "medianMs": 4709.401708,
+      "peakRssBytes": 483590144,
+      "outputSize": 19732769,
+      "speedupVsCsSeq": 0.5208923700080332
+    },
+    {
+      "label": "zip.js — pure-JS, parallel",
+      "lib": "zipjs",
+      "medianMs": 4703.532292,
+      "peakRssBytes": 506757120,
+      "outputSize": 19732769,
+      "speedupVsCsSeq": 0.5215423780915331
+    },
+    {
+      "label": "jszip (pako)",
+      "lib": "jszip",
+      "medianMs": 5758.481333000001,
+      "peakRssBytes": 456638464,
+      "outputSize": 19734552,
+      "speedupVsCsSeq": 0.42599624365231914
+    },
+    {
+      "label": "fflate — zipSync",
+      "lib": "fflate",
+      "medianMs": 3103.112583,
+      "peakRssBytes": 446529536,
+      "outputSize": 20031041,
+      "speedupVsCsSeq": 0.7905260770875484
+    },
+    {
+      "label": "fflate — async (worker pool)",
+      "lib": "fflate",
+      "medianMs": 728.978125,
+      "peakRssBytes": 622379008,
+      "outputSize": 20031041,
+      "speedupVsCsSeq": 3.3651097788428146
+    },
+    {
+      "label": "archiver (Node zlib)",
+      "lib": "archiver",
+      "medianMs": 2266.316875,
+      "peakRssBytes": 432865280,
+      "outputSize": 19590845,
+      "speedupVsCsSeq": 1.082413251236105
+    }
+  ]
+}

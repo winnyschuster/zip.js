@@ -1,0 +1,14 @@
+# Backend & parallelism — 8 files x 8 MB (parallel-friendly) — Node v24.12.0, 3 runs, baseline 42 MB
+
+zip.js — CompressionStream, sequential        2453 ms   peak  473 MB   out 19.6 MB
+zip.js — CompressionStream, parallel           657 ms   peak  518 MB   out 19.6 MB
+zip.js — WASM, sequential                     4176 ms   peak  485 MB   out 19.7 MB
+zip.js — WASM, parallel                       4175 ms   peak  505 MB   out 19.7 MB
+zip.js — pure-JS, sequential                  4709 ms   peak  484 MB   out 19.7 MB
+zip.js — pure-JS, parallel                    4704 ms   peak  507 MB   out 19.7 MB
+jszip (pako)                                  5758 ms   peak  457 MB   out 19.7 MB
+fflate — zipSync                              3103 ms   peak  447 MB   out 20.0 MB
+fflate — async (worker pool)                   729 ms   peak  622 MB   out 20.0 MB
+archiver (Node zlib)                          2266 ms   peak  433 MB   out 19.6 MB
+
+wrote /Users/gildas/Desktop/Dev/project-zip-js/zip-js/benchmarks/results/backends-results.json

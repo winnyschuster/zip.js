@@ -1,4 +1,5 @@
 tests
+benchmarks
 rollup*
 tsconfig.json
 .vscode
