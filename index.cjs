@@ -4659,12 +4659,17 @@ class ZipWriter {
 			const extraFieldLength = getLength(rawExtraFieldZip64, rawExtraFieldAES, rawExtraFieldExtendedTimestamp, rawExtraFieldNTFS, rawExtraFieldUnix, rawExtraField);
 			const zip64UncompressedSize = zip64 && uncompressedSize >= MAX_32_BITS;
 			const zip64CompressedSize = zip64 && compressedSize >= MAX_32_BITS;
+			// getBitFlag interprets its `level` argument as a 0-9 compression level, but the reader
+			// hands back the raw 2-bit compression-level field (0-3) it decoded from the general
+			// purpose flag. Re-deriving the flag would collapse every deflated entry to "super fast";
+			// preserve the original level bits verbatim instead.
+			const bitFlagValue = (getBitFlag(level, languageEncodingFlag, dataDescriptor, encrypted, compressionMethod) & ~BITFLAG_LEVEL) | (level << 1);
 			const {
 				headerArray,
 				headerView
 			} = getHeaderArrayData({
 				version,
-				bitFlag: getBitFlag(level, languageEncodingFlag, dataDescriptor, encrypted, compressionMethod),
+				bitFlag: bitFlagValue,
 				compressionMethod,
 				uncompressedSize,
 				compressedSize,
@@ -5507,7 +5512,14 @@ function getHeaderInfo(options) {
 		uncompressedSize
 	} = options;
 	let { version, compressionMethod } = options;
-	const compressed = !directory && (level > 0 || (level === UNDEFINED_VALUE && compressionMethod !== 0));
+	// Whether the data is actually deflated must agree with the compression method written to the
+	// header. An explicit method is authoritative (STORE never compresses, DEFLATE always does,
+	// whatever the level); only when no method is given does the level decide (compress unless it is
+	// zero). Otherwise {compressionMethod:0, level:9} would deflate data labeled STORE and
+	// {compressionMethod:8, level:0} would store data labeled DEFLATE, both unreadable.
+	const compressed = !directory && (compressionMethod === UNDEFINED_VALUE
+		? (level === UNDEFINED_VALUE || level > 0)
+		: compressionMethod !== COMPRESSION_METHOD_STORE);
 	let rawLocalExtraFieldZip64;
 	const uncompressedFile = passThrough || !compressed;
 	const zip64ExtraFieldComplete = zip64 && (options.bufferedWrite || ((!zip64UncompressedSize && !zip64CompressedSize) || uncompressedFile));
@@ -5530,12 +5542,6 @@ function getHeaderInfo(options) {
 				extraFieldZip64Empty = false;
 			}
 			if (zip64CompressedSize && uncompressedFile) {
-				// This slot holds the compressed size ahead of the data write; on the direct path
-				// updateLocalHeader never runs, so it is the only chance to record it. A plain STORE
-				// entry has compressedSize == uncompressedSize, an encrypted STORE entry adds the fixed
-				// encryption overhead, but a passthrough entry carries an independent compressed size
-				// that is not known yet: leave the zip64 placeholder for the always-present data
-				// descriptor (and the central directory) to supply, rather than the wrong value.
 				const encryptionOverhead = encrypted ? (zipCrypto ? 12 : 16 + encryptionStrength * 4) : 0;
 				extraFieldZip64.uint64(passThrough ? 0 : uncompressedSize + encryptionOverhead);
 				extraFieldZip64Empty = false;
