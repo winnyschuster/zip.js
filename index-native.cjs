@@ -4888,8 +4888,6 @@ function resolveAttributes(zipWriter, name, options) {
 	if (unixExtraFieldType !== UNDEFINED_VALUE && unixExtraFieldType !== INFOZIP_EXTRA_FIELD_TYPE && unixExtraFieldType !== UNIX_EXTRA_FIELD_TYPE) {
 		throw new Error(ERR_INVALID_UNIX_EXTRA_FIELD_TYPE);
 	}
-	// the Info-ZIP Unix "Ux" field (0x7855) stores uid/gid as fixed 2-byte values; larger ids need
-	// the Info-ZIP New Unix "ux" field (0x7875), selected with unixExtraFieldType 'infozip'
 	if (unixExtraFieldType === UNIX_EXTRA_FIELD_TYPE &&
 		((uid !== UNDEFINED_VALUE && uid > MAX_16_BITS) || (gid !== UNDEFINED_VALUE && gid > MAX_16_BITS))) {
 		throw new Error(ERR_INVALID_UNIX_ID_SIZE);
@@ -5060,8 +5058,6 @@ function resolveMetadata(zipWriter, name, options) {
 			if (getLength(data) > MAX_16_BITS) {
 				throw new Error(ERR_INVALID_EXTRAFIELD_DATA);
 			}
-			// the tag and length are 16-bit little-endian; writing them through a Uint16Array with
-			// arraySet would truncate each to a single byte (Uint8Array.set converts element-wise)
 			setUint16(rawExtraFieldView, offset, type);
 			setUint16(rawExtraFieldView, offset + 2, getLength(data));
 			arraySet(rawExtraField, data, offset + 4);
@@ -5593,7 +5589,6 @@ function getHeaderInfo(options) {
 	try {
 		const { uid, gid, unixExtraFieldType } = options;
 		if (unixExtraFieldType == INFOZIP_EXTRA_FIELD_TYPE && (uid !== UNDEFINED_VALUE || gid !== UNDEFINED_VALUE)) {
-			// Info-ZIP New Unix "ux" field (0x7875): version + variable-length uid/gid, up to 32 bits
 			const uidBytes = packUnixId(uid);
 			const gidBytes = packUnixId(gid);
 			const payloadLength = 3 + uidBytes.length + gidBytes.length;
@@ -5607,8 +5602,6 @@ function getHeaderInfo(options) {
 			extraFieldUnix.bytes(gidBytes);
 			rawExtraFieldUnix = extraFieldUnix.array;
 		} else if (unixExtraFieldType == UNIX_EXTRA_FIELD_TYPE && (uid !== UNDEFINED_VALUE || gid !== UNDEFINED_VALUE)) {
-			// Info-ZIP Unix "Ux" field (0x7855): fixed 2-byte uid + gid. The file mode is not part of
-			// this field; it is carried in the external file attributes (see below).
 			const extraFieldUnix = createRecordWriter(8);
 			extraFieldUnix.uint16(EXTRAFIELD_TYPE_UNIX);
 			extraFieldUnix.uint16(4);
@@ -6879,6 +6872,12 @@ class FS {
 		let node = this.root;
 		for (let index = 0; node && index < path.length; index++) {
 			node = node.getChildByName(path[index]);
+		}
+		if (!node) {
+			// an entry may have been added with a name that contains "/" verbatim (e.g. via
+			// addText/addData), in which case the name is not split into path segments; fall
+			// back to an exact match against each entry's full relative name
+			node = this.entries.find(entry => entry && entry.getRelativeName() == fullname);
 		}
 		return node;
 	}
