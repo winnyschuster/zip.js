@@ -6808,8 +6808,15 @@ class ZipFileEntry extends ZipEntry {
 		return this.getData({ writable }, options);
 	}
 
-	getArrayBuffer(options) {
-		return this.data.arrayBuffer(options);
+	async getArrayBuffer(options) {
+		// this.data may be a string, a Uint8Array, a data URI or a Blob depending on how the entry
+		// was created, so retrieve the bytes through getUint8Array rather than assuming a Blob; this
+		// also applies the options (password, signal, onprogress...) like the other getData() getters
+		const array = await this.getUint8Array(options);
+		// return the backing buffer directly when the array spans it, slicing the exact bytes otherwise
+		return array.byteOffset || array.byteLength != array.buffer.byteLength
+			? array.buffer.slice(array.byteOffset, array.byteOffset + array.byteLength)
+			: array.buffer;
 	}
 
 	replaceBlob(blob) {
@@ -7165,9 +7172,6 @@ class FS {
 			node = node.getChildByName(path[index]);
 		}
 		if (!node) {
-			// an entry may have been added with a name that contains "/" verbatim (e.g. via
-			// addText/addData), in which case the name is not split into path segments; fall
-			// back to an exact match against each entry's full relative name
 			node = this.entries.find(entry => entry && entry.getRelativeName() == fullname);
 		}
 		return node;
