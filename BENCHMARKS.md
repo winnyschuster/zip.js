@@ -25,7 +25,7 @@ should not trust anyone's benchmark (including this one) without reproducing it.
 | Machine | Apple M2, 8 cores (4 performance + 4 efficiency), 16 GB RAM |
 | OS | macOS 26.5.1 (arm64) |
 | Runtime | Node.js v24.12.0 |
-| zip.js | 2.8.28 |
+| zip.js | 2.8.29 |
 | jszip | 3.10.1 |
 | fflate | 0.8.3 |
 | archiver | 8.0.0 |
