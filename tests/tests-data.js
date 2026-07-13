@@ -1,3 +1,9 @@
+// Some crypto/error-path entries set `sanitizeResources: false`. On Deno, these tests take an
+// error/abort path that cancels a stream transferred to the codec worker, and Deno leaks that
+// transferred ReadableStream's underlying MessagePort on cancel (draining to completion does not
+// leak). It is a Deno resource-sanitizer bug, not a zip.js one — nothing in JS closes the port —
+// so the sanitizer is opted out only for the affected tests. See denoland/deno#36015 (repro in
+// benchmarks/deno-messageport-leak.mjs).
 export default ([
 	{ title: "Abort signal (read)", script: "./test-abort-signal-read.js" },
 	{ title: "Abort signal (worker reuse)", script: "./test-worker-reuse-after-abort.js" },
@@ -22,9 +28,9 @@ export default ([
 	{ title: "Compression method and level", script: "./test-compression-method-level.js" },
 	{ title: "Common JS", script: "./test-common-js.cjs", env: ["node"] },
 	{ title: "Core", script: "./test-core.js" },
-	{ title: "Crypto", script: "./test-crypto.js" },
+	{ title: "Crypto", script: "./test-crypto.js", sanitizeResources: false },
 	{ title: "Crypto (raw password)", script: "./test-crypto-raw-password.js" },
-	{ title: "Crypto check password only", script: "./test-crypto-check-password.js" },
+	{ title: "Crypto check password only", script: "./test-crypto-check-password.js", sanitizeResources: false },
 	{ title: "Crypto tampered data", script: "./test-crypto-tampered.js" },
 	{ title: "Crypto AES streaming", script: "./test-aes-streaming.js" },
 	{ title: "Custom IO classes", script: "./test-custom-io.js" },
@@ -48,7 +54,7 @@ export default ([
 	{ title: "Extra field", script: "./test-extra-field.js" },
 	{ title: "Last access date and creation date", script: "./test-last-access-date.js" },
 	{ title: "Filesystem base 64", script: "./test-fs-base64.js" },
-	{ title: "Filesystem check password", script: "./test-fs-check-password.js" },
+	{ title: "Filesystem check password", script: "./test-fs-check-password.js", sanitizeResources: false },
 	{ title: "Filesystem export", script: "./test-fs-export-options.js" },
 	{ title: "Filesystem export error", script: "./test-fs-export-error.js" },
 	{ title: "Filesystem export zip", script: "./test-fs-export-zip.js" },
@@ -72,7 +78,7 @@ export default ([
 	{ title: "HTTP zip64", script: "./test-http-zip64.js" },
 	{ title: "HTTP reader (custom fetch)", script: "./test-http-reader-custom-fetch.js" },
 	{ title: "Invalid CRC", script: "./test-invalid-crc.js" },
-	{ title: "Invalid uncompressed size", script: "./test-invalid-uncompressed-size.js" },
+	{ title: "Invalid uncompressed size", script: "./test-invalid-uncompressed-size.js", sanitizeResources: false },
 	{ title: "Multiple writers", script: "./test-multiple-writers.js" },
 	{ title: "MS-DOS attributes", script: "./test-msdos-attributes.js" },
 	{ title: "No worker", script: "./test-no-worker.js" },
@@ -90,7 +96,7 @@ export default ([
 	{ title: "Pass through zstd", script: "./test-passthrough-zstd.js" },
 	{ title: "Prepended data with zip64 offsets", script: "./test-prepended-data-zip64.js" },
 	{ title: "Zip64 offset boundaries", script: "./test-zip64-offset-boundary.js" },
-	{ title: "Worker loading error", script: "./test-worker-error.js" },
+	{ title: "Worker loading error", script: "./test-worker-error.js", sanitizeResources: false },
 	{ title: "Props", script: "./test-props.js" },
 	{ title: "Readable Stream", script: "./test-readable-stream.js" },
 	{ title: "Readable Zip Stream", script: "./test-readable-zip-stream.js" },
@@ -128,5 +134,5 @@ export default ([
 	{ title: "Zip64 (passthrough)", script: "./test-zip64-passthrough.js" },
 	{ title: "Zip64 (streamed local extra field)", script: "./test-zip64-stream-local-field.js" },
 	{ title: "Zip64", script: "./test-zip64.js" },
-	{ title: "Zipcrypto", script: "./test-zipcrypto.js" }
+	{ title: "Zipcrypto", script: "./test-zipcrypto.js", sanitizeResources: false }
 ]);
