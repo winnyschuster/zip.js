@@ -2177,7 +2177,15 @@
 				try {
 					await initModule(config);
 				} catch {
-					options.useCompressionStream = true;
+					// The WASM module failed to load. Fall back to the native CompressionStream only if the
+					// zlib codec that would otherwise run depends on that module; a self-contained codec
+					// supplied through config (e.g. the pure-JS port) stays usable and is kept as requested.
+					const ZlibStream = options.codecType.startsWith(CODEC_DEFLATE) ?
+						config.CompressionStreamZlib :
+						config.DecompressionStreamZlib;
+					if (!ZlibStream || ZlibStream.requiresModule) {
+						options.useCompressionStream = true;
+					}
 				}
 			}
 			codecStream = new CodecStream(options, config);
