@@ -5266,9 +5266,6 @@ async function getFileEntry(zipWriter, name, reader, entryInfo, options) {
 			}
 			zipWriter.offset += writer.size - writerSizeBeforeEntry;
 			if (bufferedWrite) {
-				// advance by the bytes that actually reached the writer, not the full buffered size:
-				// a flush aborted mid-stream only wrote flushedBufferedSize bytes, and over-counting
-				// here would corrupt the offsets of every subsequent entry
 				zipWriter.offset += flushedBufferedSize;
 			}
 		}
@@ -5533,7 +5530,14 @@ function getHeaderInfo(options) {
 				extraFieldZip64Empty = false;
 			}
 			if (zip64CompressedSize && uncompressedFile) {
-				extraFieldZip64.uint64(uncompressedSize);
+				// This slot holds the compressed size ahead of the data write; on the direct path
+				// updateLocalHeader never runs, so it is the only chance to record it. A plain STORE
+				// entry has compressedSize == uncompressedSize, an encrypted STORE entry adds the fixed
+				// encryption overhead, but a passthrough entry carries an independent compressed size
+				// that is not known yet: leave the zip64 placeholder for the always-present data
+				// descriptor (and the central directory) to supply, rather than the wrong value.
+				const encryptionOverhead = encrypted ? (zipCrypto ? 12 : 16 + encryptionStrength * 4) : 0;
+				extraFieldZip64.uint64(passThrough ? 0 : uncompressedSize + encryptionOverhead);
 				extraFieldZip64Empty = false;
 			}
 			if (extraFieldZip64Empty) {
@@ -6127,9 +6131,6 @@ async function writeData(writer, array) {
 	}
 }
 
-// Flushes a buffered entry's data into the writer, reporting each written chunk's length through
-// onChunkWritten() so the failure-recovery code knows how many bytes actually reached the writer
-// when the flush is aborted mid-stream. onChunkWritten() runs only after a chunk has been written.
 async function flushBufferedData(readable, writer, signal, onChunkWritten) {
 	const streamWriter = writer.writable.getWriter();
 	try {
