@@ -4631,6 +4631,7 @@
 	const MAX_UNIX_TIME = 2147483647;
 	const ERR_UNSUPPORTED_FORMAT = "Zip64 is not supported (set the 'zip64' option to 'true')";
 	const ERR_UNDEFINED_UNCOMPRESSED_SIZE = "Undefined uncompressed size";
+	const ERR_UNDEFINED_READER = "Undefined reader";
 	const ERR_ZIP_NOT_EMPTY = "Zip file not empty";
 	const ERR_INVALID_UID = "Invalid uid (must be integer 0..2^32-1)";
 	const ERR_INVALID_GID = "Invalid gid (must be integer 0..2^32-1)";
@@ -5178,6 +5179,11 @@
 		let maximumCompressedSize = 0;
 		let uncompressedSize = 0;
 		if (passThrough) {
+			// the headers of a passThrough entry describe the payload verbatim: without a
+			// reader they would declare content that is not there
+			if (!reader) {
+				throw new Error(ERR_UNDEFINED_READER);
+			}
 			uncompressedSize = options[PROPERTY_NAME_UNCOMPRESSED_SIZE];
 			if (uncompressedSize === UNDEFINED_VALUE) {
 				throw new Error(ERR_UNDEFINED_UNCOMPRESSED_SIZE);
@@ -6468,6 +6474,7 @@
 	exports.ERR_LOCAL_FILE_HEADER_NOT_FOUND = ERR_LOCAL_FILE_HEADER_NOT_FOUND;
 	exports.ERR_OVERLAPPING_ENTRY = ERR_OVERLAPPING_ENTRY;
 	exports.ERR_SPLIT_ZIP_FILE = ERR_SPLIT_ZIP_FILE;
+	exports.ERR_UNDEFINED_READER = ERR_UNDEFINED_READER;
 	exports.ERR_UNDEFINED_UNCOMPRESSED_SIZE = ERR_UNDEFINED_UNCOMPRESSED_SIZE;
 	exports.ERR_UNSUPPORTED_COMPRESSION = ERR_UNSUPPORTED_COMPRESSION$1;
 	exports.ERR_UNSUPPORTED_ENCRYPTION = ERR_UNSUPPORTED_ENCRYPTION;
