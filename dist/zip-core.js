@@ -1778,14 +1778,15 @@
 	function pipeThroughCommpressionStream(readable, useCompressionStream, options, CompressionStreamNative, CompressionStreamZlib, CompressionStream) {
 		const Stream = useCompressionStream && CompressionStreamNative ? CompressionStreamNative : CompressionStreamZlib || CompressionStream;
 		const format = options.deflate64 ? FORMAT_DEFLATE64_RAW : FORMAT_DEFLATE_RAW;
+		let codecStream;
 		try {
-			readable = pipeThrough(readable, new Stream(format, options));
+			codecStream = new Stream(format, options);
 		} catch (error) {
 			if (useCompressionStream) {
 				if (CompressionStreamZlib) {
-					readable = pipeThrough(readable, new CompressionStreamZlib(format, options));
+					codecStream = new CompressionStreamZlib(format, options);
 				} else if (CompressionStream) {
-					readable = pipeThrough(readable, new CompressionStream(format, options));
+					codecStream = new CompressionStream(format, options);
 				} else {
 					throw error;
 				}
@@ -1793,11 +1794,60 @@
 				throw error;
 			}
 		}
-		return readable;
+		// The native CompressionStream/DecompressionStream and the pure-JS zlib port do not signal
+		// backpressure on their writable side (their `ready` never pends), so a plain pipeThrough drains
+		// the whole source into them and peak memory grows with the entry size. Awaiting each write()
+		// paces the source to the codec's consumption rate, keeping streaming memory bounded. The WASM
+		// codec already backpressures, so this is a no-op cost for it.
+		return pipeThroughBackpressured(readable, codecStream);
 	}
 
 	function pipeThrough(readable, transformStream) {
 		return readable.pipeThrough(transformStream);
+	}
+
+	// Like readable.pipeThrough(transformStream), but drives the writable side manually and awaits each
+	// write() so that a codec which under-reports backpressure cannot pull the whole source into memory.
+	// Errors propagate in both directions: a source error aborts the codec; a downstream cancel/error
+	// (surfaced through the codec's writable rejecting) cancels the source.
+	function pipeThroughBackpressured(readable, transformStream) {
+		const writer = transformStream.writable.getWriter();
+		const reader = readable.getReader();
+		pump();
+		return transformStream.readable;
+
+		async function pump() {
+			try {
+				for (; ;) {
+					await writer.ready;
+					const result = await reader.read();
+					if (result.done) {
+						await writer.close();
+						break;
+					}
+					await writer.write(result.value);
+				}
+			} catch (error) {
+				await abort(writer, error);
+				await cancel(reader, error);
+			}
+		}
+	}
+
+	async function abort(writer, error) {
+		try {
+			await writer.abort(error);
+		} catch {
+			// the writable may already be errored/closed
+		}
+	}
+
+	async function cancel(reader, error) {
+		try {
+			await reader.cancel(error);
+		} catch {
+			// the readable may already be errored/closed
+		}
 	}
 
 	// DecompressionStream implementations can fail with a message-less TypeError on malformed
