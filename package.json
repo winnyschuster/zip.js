@@ -54,6 +54,10 @@
     "./dist/zip-web-worker-native.js": "./dist/zip-web-worker-native.js",
     "./dist/zip-module.wasm": "./dist/zip-module.wasm",
     ".": {
+      "react-native": {
+        "types": "./index.d.ts",
+        "default": "./index-native.cjs"
+      },
       "import": {
         "types": "./index.d.ts",
         "default": "./index.js"
@@ -72,6 +76,14 @@
         "types": "./index.d.ts",
         "default": "./index-native.cjs"
       }
+    },
+    "./index.cjs": {
+      "types": "./index.d.ts",
+      "default": "./index.cjs"
+    },
+    "./index-native.cjs": {
+      "types": "./index.d.ts",
+      "default": "./index-native.cjs"
     },
     "./index.min.js": {
       "import": {
