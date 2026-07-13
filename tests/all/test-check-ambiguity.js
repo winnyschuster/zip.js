@@ -56,11 +56,33 @@ async function test() {
 		const firstRecordNameOffset = duplicateDirectoryOffset + 46;
 		const firstRecordNameLength = duplicateView.getUint16(duplicateDirectoryOffset + 28, true);
 		const firstRecordName = duplicateArray.subarray(firstRecordNameOffset, firstRecordNameOffset + firstRecordNameLength);
-		let secondRecordOffset = duplicateDirectoryOffset + 46 + firstRecordNameLength +
+		const secondRecordOffset = duplicateDirectoryOffset + 46 + firstRecordNameLength +
 			duplicateView.getUint16(duplicateDirectoryOffset + 30, true) + duplicateView.getUint16(duplicateDirectoryOffset + 32, true);
 		// overwrite the second record filename with the first one (both names have the same length here)
 		duplicateArray.set(firstRecordName, secondRecordOffset + 46);
 		await expectAmbiguous(duplicateArray, "duplicate filename");
+		// a local file header disagreeing with its central directory record must be rejected when reading the entry
+		const localFilenameArray = array.slice();
+		localFilenameArray[30] ^= 0x01;
+		await expectAmbiguousEntry(localFilenameArray, "mismatched local file header (filename)");
+		// ... while the same archive can still be read without the option (the central directory is authoritative)
+		await readEntriesUnchecked(localFilenameArray);
+		const localBitFlagArray = array.slice();
+		const localBitFlagView = new DataView(localBitFlagArray.buffer);
+		localBitFlagView.setUint16(6, localBitFlagView.getUint16(6, true) ^ 0x0800, true);
+		await expectAmbiguousEntry(localBitFlagArray, "mismatched local file header (general purpose bit flag)");
+		const localMethodArray = array.slice();
+		new DataView(localMethodArray.buffer).setUint16(8, 8, true);
+		await expectAmbiguousEntry(localMethodArray, "mismatched local file header (compression method)");
+		const localSignatureArray = array.slice();
+		for (let indexByte = 14; indexByte < 18; indexByte++) {
+			localSignatureArray[indexByte] ^= 0xff;
+		}
+		await expectAmbiguousEntry(localSignatureArray, "mismatched local file header (signature or sizes)");
+		// zeroed out local signature and sizes are tolerated (produced by some streaming writers)
+		const localZeroedArray = array.slice();
+		localZeroedArray.fill(0, 14, 26);
+		await readEntries(localZeroedArray);
 	} finally {
 		await zip.terminateWorkers();
 	}
@@ -84,6 +106,21 @@ async function readEntries(array) {
 	}
 }
 
+async function readEntriesUnchecked(array) {
+	const zipReader = new zip.ZipReader(new zip.Uint8ArrayReader(array));
+	try {
+		const entries = await zipReader.getEntries();
+		for (let indexEntry = 0; indexEntry < entries.length; indexEntry++) {
+			const data = await entries[indexEntry].getData(new zip.TextWriter());
+			if (data != CONTENTS[indexEntry]) {
+				throw new Error();
+			}
+		}
+	} finally {
+		await zipReader.close();
+	}
+}
+
 async function expectAmbiguous(array, reason) {
 	const zipReader = new zip.ZipReader(new zip.Uint8ArrayReader(array), { checkAmbiguity: true });
 	try {
@@ -92,6 +129,23 @@ async function expectAmbiguous(array, reason) {
 	} catch (error) {
 		if (error.message != zip.ERR_AMBIGUOUS_ARCHIVE || error.reason != reason) {
 			throw error;
+		}
+	} finally {
+		await zipReader.close();
+	}
+}
+
+async function expectAmbiguousEntry(array, reason) {
+	const zipReader = new zip.ZipReader(new zip.Uint8ArrayReader(array), { checkAmbiguity: true });
+	try {
+		const entries = await zipReader.getEntries();
+		try {
+			await entries[0].getData(new zip.TextWriter());
+			throw new Error();
+		} catch (error) {
+			if (error.message != zip.ERR_AMBIGUOUS_ARCHIVE || error.reason != reason) {
+				throw error;
+			}
 		}
 	} finally {
 		await zipReader.close();

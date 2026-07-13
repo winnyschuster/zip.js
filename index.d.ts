@@ -846,7 +846,9 @@ export interface GetEntriesOptions {
    * `true` to throw an {@link ERR_AMBIGUOUS_ARCHIVE} error when the archive could be parsed differently by other
    * tools. This detects data before or after the zip structure (e.g. a self-extracting archive stub or a
    * concatenated archive), central directory records not accounted for by the end of central directory record, an
-   * end of central directory record disagreeing with its zip64 counterpart, and duplicate filenames.
+   * end of central directory record disagreeing with its zip64 counterpart, and duplicate filenames. When reading
+   * the content of an entry, it also validates the local file header against the central directory record (see
+   * {@link ZipReaderOptions#checkAmbiguity}).
    *
    * @defaultValue false
    */
@@ -857,6 +859,17 @@ export interface GetEntriesOptions {
  * Represents options passed to the constructor of {@link ZipReader} and {@link FileEntry#getData}.
  */
 export interface ZipReaderOptions {
+  /**
+   * `true` to throw an {@link ERR_AMBIGUOUS_ARCHIVE} error when calling {@link FileEntry#getData} if the local
+   * file header of the entry disagrees with its central directory record in a way that could make other tools
+   * (e.g. streaming readers based on local file headers) interpret the entry differently. This detects mismatched
+   * filenames, general purpose bit flags (encryption, data descriptor and language encoding flags), compression
+   * methods, signatures and sizes. The extra fields are not compared because the zip specification allows them
+   * to differ.
+   *
+   * @defaultValue false
+   */
+  checkAmbiguity?: boolean;
   /**
    * `true` to check only if the password is valid.
    *
