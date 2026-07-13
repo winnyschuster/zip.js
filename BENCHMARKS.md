@@ -104,6 +104,36 @@ sequential or "parallel"). Use those backends when a native `CompressionStream` 
 unavailable or when you need byte-identical zlib output; use the native backend when you
 want this parallelism.
 
+There is a second way to land on the WASM backend by accident: because
+`CompressionStream` exposes no level control, requesting any non-default compression
+level (e.g. `{ level: 5 }`) makes zip.js fall back to the WASM zlib codec — which, per
+the table, does not parallelize via concurrent `add()`. Keep the default level to keep
+the native-backend parallelism, or pair a custom level with Web Workers (below).
+
+### Parallelism is runtime-dependent
+
+The table above is measured on **Node**, and its "no Web Workers needed" result does
+**not** hold on every runtime: concurrent `add()` only spreads across cores if the
+runtime runs `CompressionStream` off the main thread. Same 8 × 8 MB workload, level 6,
+median of 3:
+
+| Runtime | sequential | concurrent `add()` | concurrent `add()` + `useWebWorkers` |
+|---|--:|--:|--:|
+| Node.js | 2.94 s | **0.74 s** | 0.74 s |
+| Bun | 1.80 s | **0.36 s** | 0.46 s |
+| Deno | 1.84 s | 1.82 s | **0.47 s** |
+
+- **Node and Bun** back `CompressionStream` with a threadpool, so concurrent `add()`
+  alone parallelizes — no Web Workers needed (Bun is fastest here).
+- **Deno** runs `CompressionStream` on the isolate thread, so concurrent `add()` alone
+  gives no speedup (1.82 s ≈ its 1.84 s sequential). Set `useWebWorkers: true` and it
+  parallelizes properly (0.47 s), landing right beside the others.
+
+**Rule of thumb:** on Node and Bun, concurrent `add()` is enough; on Deno, also set
+`useWebWorkers: true`. Web Workers are the portable way to get this parallelism on any
+runtime — and the only way once you use a non-default level (which switches to the WASM
+codec).
+
 ## Decompression
 
 Level-6 archives, read back and fully materialized. archiver has no unzip API, so it is
