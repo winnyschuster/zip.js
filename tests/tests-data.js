@@ -103,6 +103,7 @@ export default ([
 	{ title: "Text encoding ", script: "./test-text-encoding.js" },
 	{ title: "Unicode file names", script: "./test-use-unicode-file-names.js" },
 	{ title: "Text UNIX metadata", script: "./test-unix-metadata.js" },
+	{ title: "Text UNIX extra field layout", script: "./test-unix-extra-field-layout.js" },
 	{ title: "Text UNIX special bits (no mode)", script: "./test-unix-special-bits-no-mode.js" },
 	{ title: "Text UNIX special bits", script: "./test-unix-special-bits.js" },
 	{ title: "Text UNIX unpack", script: "./test-unix-unpack.js" },

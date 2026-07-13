@@ -15,10 +15,25 @@ async function test() {
 	try {
 		for (const c of cases) {
 			for (const type of ["infozip", "unix"]) {
-				const blobWriter = new zip.BlobWriter("application/zip");
-				const zipWriter = new zip.ZipWriter(blobWriter);
 				const options = { compressionMethod: 0, uid: c.uid, gid: c.uid, unixExtraFieldType: type };
 				if (type === "unix") options.unixMode = 0o100755;
+				// the Info-ZIP Unix "Ux" field (0x7855) stores fixed 2-byte ids; ids larger than
+				// 16 bits must be rejected (the "infozip" / 0x7875 field is required for those)
+				if (type === "unix" && c.uid > 0xFFFF) {
+					const blobWriter = new zip.BlobWriter("application/zip");
+					const zipWriter = new zip.ZipWriter(blobWriter);
+					let rejected = false;
+					try {
+						await zipWriter.add("file.txt", new zip.Uint8ArrayReader(new Uint8Array([0x41])), options);
+					} catch {
+						rejected = true;
+					}
+					await zipWriter.close();
+					if (!rejected) throw new Error(`${c.name}:${type} expected a >16-bit id to be rejected`);
+					continue;
+				}
+				const blobWriter = new zip.BlobWriter("application/zip");
+				const zipWriter = new zip.ZipWriter(blobWriter);
 				await zipWriter.add("file.txt", new zip.Uint8ArrayReader(new Uint8Array([0x41])), options);
 				await zipWriter.close();
 				const dataBlob = await blobWriter.getData();
