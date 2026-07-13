@@ -11,7 +11,9 @@ export { test };
 async function test() {
 	zip.configure({ chunkSize: 128, useWebWorkers: true });
 	const blobWriter = new zip.BlobWriter("application/zip");
-	const extraFieldvalue = [[42, new Uint8Array(42)], [43, new Uint8Array(43)], [44, new Uint8Array(44)]];
+	// include a 16-bit type (> 255) and a payload longer than 255 bytes: the type and length are
+	// 16-bit little-endian and must not be truncated to a single byte
+	const extraFieldvalue = [[42, new Uint8Array(42)], [43, new Uint8Array(43)], [44, new Uint8Array(44)], [0xCAFE, new Uint8Array(300).fill(7)]];
 	const extraField = new Map(extraFieldvalue);
 	const zipWriter = new zip.ZipWriter(blobWriter);
 	await zipWriter.add(FILENAME, new zip.BlobReader(BLOB), { extraField });
@@ -22,5 +24,9 @@ async function test() {
 	await zip.terminateWorkers();
 	if (entries[0].extraField.get(42).data.length != 42) {
 		throw new Error();
+	}
+	const largeField = entries[0].extraField.get(0xCAFE);
+	if (!largeField || largeField.data.length != 300) {
+		throw new Error("16-bit extra field type/length was truncated");
 	}
 }
