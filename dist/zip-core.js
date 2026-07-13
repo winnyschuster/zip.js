@@ -1640,12 +1640,12 @@
 	}
 
 	function updateKeys(target, byte) {
-		let [key0, key1, key2] = target.keys;
+		let [, key1] = target.keys;
 		target.crcKey0.append([byte]);
-		key0 = ~target.crcKey0.get();
+		const key0 = ~target.crcKey0.get();
 		key1 = getInt32(Math.imul(getInt32(key1 + getInt8(key0)), 134775813) + 1);
 		target.crcKey2.append([key1 >>> 24]);
-		key2 = ~target.crcKey2.get();
+		const key2 = ~target.crcKey2.get();
 		target.keys = [key0, key1, key2];
 	}
 
@@ -2726,7 +2726,7 @@
 
 		writeUint8Array(array) {
 			const writer = this;
-			let indexArray = 0;
+			let indexArray;
 			let dataString = writer.pending;
 			const delta = writer.pending.length;
 			writer.pending = "";
@@ -3749,7 +3749,7 @@
 			let diskNumber = getUint16(endOfDirectoryView, 6);
 			let filesLength = getUint16(endOfDirectoryView, 10);
 			let prependedDataLength = 0;
-			let startOffset = 0;
+			let startOffset;
 			let zip64EndOfDirectory;
 			if (directoryDataOffset == MAX_32_BITS || directoryDataLength == MAX_32_BITS || filesLength == MAX_16_BITS || diskNumber == MAX_16_BITS) {
 				const endOfDirectoryLocatorArray = endOfDirectoryInfo.offset >= ZIP64_END_OF_CENTRAL_DIR_LOCATOR_LENGTH ?
@@ -4750,7 +4750,7 @@
 				rawExtraFieldAES = rawExtraFieldAES || new Uint8Array();
 				rawExtraFieldExtendedTimestamp = rawExtraFieldExtendedTimestamp || new Uint8Array();
 				rawExtraFieldNTFS = rawExtraFieldNTFS || new Uint8Array();
-				rawExtraFieldUnix = entry.rawExtraFieldUnix || new Uint8Array();
+				rawExtraFieldUnix = rawExtraFieldUnix || new Uint8Array();
 				rawExtraField = rawExtraField || new Uint8Array();
 				if (entry.extraFieldAES) {
 					compressionMethod = COMPRESSION_METHOD_AES;
@@ -5823,7 +5823,7 @@
 	function appendExtraFieldUSDZ(entryInfo, zipWriterOffset) {
 		const { headerInfo } = entryInfo;
 		let { localHeaderArray, extraFieldLength } = headerInfo;
-		let localHeaderArrayView = getDataView(localHeaderArray);
+		let localHeaderArrayView;
 		let extraBytesLength = 64 - ((zipWriterOffset + getLength(localHeaderArray)) % 64);
 		if (extraBytesLength < 4) {
 			extraBytesLength += 64;
