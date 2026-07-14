@@ -46,9 +46,60 @@ async function test() {
 		for (const strictness of ["strict", "balanced", "tolerant"]) {
 			await expectFilenames(clean, ["x.txt", "y.txt"], { strictness });
 		}
+
+		// a comment stuffed with thousands of anchored but unreachable end of central directory records must not
+		// amplify into one read per record: the reachability check is served from the tail window already in
+		// memory and out-of-window probes are capped, so opening the real archive stays cheap
+		const stuffed = stuffWithUnreachableRecords(await buildZip(["real.txt"], new Uint8Array(2000 * 22)), 2000);
+		const countingReader = new CountingReader(stuffed);
+		const stuffedZipReader = new zip.ZipReader(countingReader);
+		try {
+			const filenames = (await stuffedZipReader.getEntries()).map(entry => entry.filename);
+			if (filenames.join(",") != "real.txt") {
+				throw new Error("expected [real.txt] but read [" + filenames + "]");
+			}
+			if (countingReader.reads > 100) {
+				throw new Error("end of central directory scan issued " + countingReader.reads + " reads (expected the amplification to be bounded)");
+			}
+		} finally {
+			await stuffedZipReader.close();
+		}
 	} finally {
 		await zip.terminateWorkers();
 	}
+}
+
+// counts every readUint8Array call so a test can assert the reader is not driven into unbounded I/O
+class CountingReader extends zip.Reader {
+	constructor(array) {
+		super();
+		this.array = new Uint8Array(array.buffer, array.byteOffset, array.byteLength);
+		this.size = this.array.length;
+		this.reads = 0;
+	}
+	readUint8Array(index, length) {
+		this.reads++;
+		return this.array.slice(index, index + length);
+	}
+}
+
+// overwrites the trailing comment of `array` with `count` fake end of central directory records, each one
+// anchored to the end of the file (so it is a scan candidate) but pointing at an unreachable central directory
+// (so it is correctly rejected). Returns the patched array.
+function stuffWithUnreachableRecords(array, count) {
+	const view = new DataView(array.buffer, array.byteOffset, array.byteLength);
+	const size = array.length;
+	const commentStart = size - count * 22;
+	for (let index = 0; index < count; index++) {
+		const recordOffset = commentStart + index * 22;
+		view.setUint32(recordOffset, END_OF_CENTRAL_DIR_SIGNATURE, true);
+		view.setUint16(recordOffset + 8, 1, true);
+		view.setUint16(recordOffset + 10, 1, true);
+		view.setUint32(recordOffset + 12, 1, true);
+		view.setUint32(recordOffset + 16, 0xFEFEFEFE, true);
+		view.setUint16(recordOffset + 20, size - recordOffset - 22, true);
+	}
+	return array;
 }
 
 async function buildZip(filenames, comment) {
