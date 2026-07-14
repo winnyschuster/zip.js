@@ -3801,6 +3801,11 @@ const OPTION_ENCODE_TEXT = "encodeText";
 const OPTION_OFFSET = "offset";
 const OPTION_USDZ = "usdz";
 const OPTION_UNIX_EXTRA_FIELD_TYPE = "unixExtraFieldType";
+const OPTION_STRICTNESS = "strictness";
+const OPTION_MAX_APPENDED_DATA_SIZE = "maxAppendedDataSize";
+const STRICTNESS_STRICT = "strict";
+const STRICTNESS_BALANCED = "balanced";
+const STRICTNESS_TOLERANT = "tolerant";
 
 /*
  Copyright (c) 2025 Gildas Lormeau. All rights reserved.
@@ -3890,7 +3895,11 @@ class ZipReader {
 			throw new Error(ERR_BAD_FORMAT);
 		}
 		reader.chunkSize = getChunkSize(config);
-		const endOfDirectoryInfo = await seekSignature(reader, END_OF_CENTRAL_DIR_SIGNATURE, reader.size, END_OF_CENTRAL_DIR_LENGTH, MAX_16_BITS * 16);
+		const strictness = getStrictness(getOptionValue$1(zipReader, options, OPTION_STRICTNESS), getOptionValue$1(zipReader, options, OPTION_CHECK_AMBIGUITY));
+		const checkAmbiguity = strictness == STRICTNESS_STRICT;
+		const rejectAmbiguousEndOfDirectory = strictness != STRICTNESS_TOLERANT;
+		const maxAppendedDataSize = getMaxAppendedDataSize(getOptionValue$1(zipReader, options, OPTION_MAX_APPENDED_DATA_SIZE), strictness);
+		const { endOfDirectoryInfo, endOfDirectoryReachingEndCount } = await findEndOfCentralDirectory(reader, rejectAmbiguousEndOfDirectory, maxAppendedDataSize);
 		if (!endOfDirectoryInfo) {
 			const signatureArray = await readUint8Array(reader, 0, 4);
 			const signatureView = getDataView$1(signatureArray);
@@ -3900,14 +3909,18 @@ class ZipReader {
 				throw new Error(ERR_EOCDR_NOT_FOUND);
 			}
 		}
+		// two or more end-anchored records that each dereference to a valid central directory cannot be told
+		// apart (see comment_length ⟺ EOF): the archive is genuinely ambiguous, so refuse rather than guess
+		if (rejectAmbiguousEndOfDirectory && endOfDirectoryReachingEndCount > 1) {
+			throwAmbiguousArchive("multiple end of central directory records");
+		}
 		const endOfDirectoryView = getDataView$1(endOfDirectoryInfo);
 		let directoryDataLength = getUint32(endOfDirectoryView, 12);
 		let directoryDataOffset = getUint32(endOfDirectoryView, 16);
 		const commentOffset = endOfDirectoryInfo.offset;
 		const commentLength = getUint16(endOfDirectoryView, 20);
 		const appendedDataOffset = commentOffset + END_OF_CENTRAL_DIR_LENGTH + commentLength;
-		const checkAmbiguity = getOptionValue$1(zipReader, options, OPTION_CHECK_AMBIGUITY);
-		if (checkAmbiguity && appendedDataOffset != reader.size) {
+		if (reader.size - appendedDataOffset > maxAppendedDataSize) {
 			throwAmbiguousArchive("appended data");
 		}
 		let lastDiskNumber = getUint16(endOfDirectoryView, 4);
@@ -3986,14 +3999,28 @@ class ZipReader {
 				throw new Error(ERR_BAD_FORMAT);
 			}
 			const expectedDirectoryDataOffset = centralDirectoryEndOffset - directoryDataLength - (reader.lastDiskOffset || 0);
-			if (getUint32(directoryView, offset) != CENTRAL_FILE_HEADER_SIGNATURE && directoryDataOffset != expectedDirectoryDataOffset && diskNumber == lastDiskNumber) {
-				const originalDirectoryDataOffset = directoryDataOffset;
-				directoryDataOffset = expectedDirectoryDataOffset;
-				if (directoryDataOffset > originalDirectoryDataOffset) {
-					prependedDataLength += directoryDataOffset - originalDirectoryDataOffset;
+			if (directoryDataOffset != expectedDirectoryDataOffset && diskNumber == lastDiskNumber) {
+				// the reconciled offset (the directory ends exactly where the canonical record begins) is anchored
+				// to the unforgeable end of the archive; the stored offset is not. Prefer the reconciled offset
+				// unless the stored one points at a directory and the reconciled one does not — that exception
+				// keeps a corrupt declared directory length from sending the read astray, while still moving off a
+				// stored offset that only looks valid because an append remnant left the previous (identically
+				// laid out) directory sitting there.
+				const storedPointsAtDirectory = getUint32(directoryView, offset) == CENTRAL_FILE_HEADER_SIGNATURE;
+				let reconcile = !storedPointsAtDirectory;
+				if (!reconcile && expectedDirectoryDataOffset >= 0 && expectedDirectoryDataOffset + 4 <= reader.size) {
+					const expectedSignatureArray = await readUint8Array(reader, expectedDirectoryDataOffset, 4, diskNumber);
+					reconcile = getUint32(getDataView$1(expectedSignatureArray), 0) == CENTRAL_FILE_HEADER_SIGNATURE;
 				}
-				directoryArray = await readUint8Array(reader, directoryDataOffset, directoryDataLength, diskNumber);
-				directoryView = getDataView$1(directoryArray);
+				if (reconcile) {
+					const originalDirectoryDataOffset = directoryDataOffset;
+					directoryDataOffset = expectedDirectoryDataOffset;
+					if (directoryDataOffset > originalDirectoryDataOffset) {
+						prependedDataLength += directoryDataOffset - originalDirectoryDataOffset;
+					}
+					directoryArray = await readUint8Array(reader, directoryDataOffset, directoryDataLength, diskNumber);
+					directoryView = getDataView$1(directoryArray);
+				}
 			}
 		}
 		const expectedDirectoryDataLength = centralDirectoryEndOffset - directoryDataOffset - (reader.lastDiskOffset || 0);
@@ -4250,7 +4277,7 @@ let ZipEntry$1 = class ZipEntry {
 			extraFieldLength,
 			filenameLength
 		} = localDirectory;
-		const checkAmbiguity = getOptionValue$1(zipEntry, options, OPTION_CHECK_AMBIGUITY);
+		const checkAmbiguity = getStrictness(getOptionValue$1(zipEntry, options, OPTION_STRICTNESS), getOptionValue$1(zipEntry, options, OPTION_CHECK_AMBIGUITY)) == STRICTNESS_STRICT;
 		let rawLocalFilename = new Uint8Array();
 		if (checkAmbiguity && (filenameLength || extraFieldLength)) {
 			const trailingDataArray = await readUint8Array(reader, offset + HEADER_SIZE, filenameLength + extraFieldLength, diskNumberStart);
@@ -4700,26 +4727,191 @@ async function detectOverlappingEntry({
 	readRanges.set(index, range);
 }
 
-async function seekSignature(reader, signature, startOffset, minimumBytes, maximumLength) {
-	const signatureArray = new Uint8Array(4);
-	const signatureView = getDataView$1(signatureArray);
-	setUint32$1(signatureView, 0, signature);
-	const maximumBytes = minimumBytes + maximumLength;
-	return (await seek(minimumBytes)) || await seek(Math.min(maximumBytes, startOffset));
+function getStrictness(strictness, checkAmbiguity) {
+	if (strictness === UNDEFINED_VALUE) {
+		// `checkAmbiguity: true` is kept as a backward-compatible alias for the strictest mode
+		return checkAmbiguity ? STRICTNESS_STRICT : STRICTNESS_BALANCED;
+	}
+	return strictness;
+}
 
-	async function seek(length) {
-		const offset = startOffset - length;
-		const bytes = await readUint8Array(reader, offset, length);
-		for (let indexByte = bytes.length - minimumBytes; indexByte >= 0; indexByte--) {
-			if (bytes[indexByte] == signatureArray[0] && bytes[indexByte + 1] == signatureArray[1] &&
-				bytes[indexByte + 2] == signatureArray[2] && bytes[indexByte + 3] == signatureArray[3]) {
-				return {
-					offset: offset + indexByte,
-					buffer: bytes.slice(indexByte, indexByte + minimumBytes).buffer
-				};
+function getMaxAppendedDataSize(maxAppendedDataSize, strictness) {
+	if (maxAppendedDataSize !== UNDEFINED_VALUE) {
+		return maxAppendedDataSize;
+	}
+	if (strictness == STRICTNESS_STRICT) {
+		// the comment must reach the end of the file: no trailing data tolerated
+		return 0;
+	}
+	if (strictness == STRICTNESS_TOLERANT) {
+		return Infinity;
+	}
+	// balanced: tolerate up to a legal comment's worth of trailing data (a 16-bit length); beyond that the
+	// trailing bytes cannot hide inside a comment, so they are treated as a second thing bolted onto the file
+	return MAX_16_BITS;
+}
+
+// cap on how many out-of-window central directory probes the scan below may issue. A legitimate archive needs
+// at most a couple (the canonical record, plus one more to detect genuine ambiguity); every other reachability
+// check is served from the tail window already in memory. The cap keeps an archive whose comment is stuffed
+// with unreachable end-anchored records from forcing an unbounded number of (potentially remote) reads.
+const MAX_END_OF_CENTRAL_DIR_PROBES = 64;
+
+// reachability rankings for an end-anchored candidate record (see getCentralDirectoryReachability)
+const CENTRAL_DIRECTORY_UNREACHABLE = 0;
+const CENTRAL_DIRECTORY_PLAUSIBLE = 1;
+const CENTRAL_DIRECTORY_REACHABLE = 2;
+
+// Locates the authoritative end of central directory record. The canonical record is the last one whose
+// declared comment reaches exactly the end of the file ("end-anchored") and that points to a central directory
+// ("reachable"); earlier signatures (stale append remnants, bytes embedded in a comment) are ignored. When two
+// or more end-anchored records point to a central directory the archive is ambiguous, and the count is returned
+// so the caller can refuse it. A record that reaches the end of the file but points to no central directory (an
+// empty archive) is only "plausible": it cannot be corroborated, so it never counts towards ambiguity and is
+// chosen only when no reachable record exists — otherwise an empty record forged in a comment could outrank the
+// genuine directory. When no record is end-anchored (appended data or an oversized comment), falls back to the
+// last record within the tolerated window that points to a directory (see seekEndOfCentralDirectory).
+async function findEndOfCentralDirectory(reader, rejectAmbiguous, maxAppendedDataSize) {
+	const { size } = reader;
+	// an end-anchored record can only live within the last END_OF_CENTRAL_DIR_LENGTH + MAX_16_BITS bytes,
+	// since the comment length that ties it to the end of the file is a 16-bit field
+	const anchoredLength = Math.min(size, END_OF_CENTRAL_DIR_LENGTH + MAX_16_BITS);
+	const anchoredOffset = size - anchoredLength;
+	const anchoredArray = await readUint8Array(reader, anchoredOffset, anchoredLength);
+	const anchoredView = getDataView$1(anchoredArray);
+	const remoteProbeBudget = { count: MAX_END_OF_CENTRAL_DIR_PROBES };
+	let endOfDirectoryInfo;
+	let plausibleEndOfDirectoryInfo;
+	let endOfDirectoryReachingEndCount = 0;
+	for (let indexByte = anchoredArray.length - END_OF_CENTRAL_DIR_LENGTH; indexByte >= 0; indexByte--) {
+		if (getUint32(anchoredView, indexByte) == END_OF_CENTRAL_DIR_SIGNATURE) {
+			const offset = anchoredOffset + indexByte;
+			const commentLength = getUint16(anchoredView, indexByte + 20);
+			// end-anchored: the declared comment extends exactly to the end of the file. The comment length is
+			// attacker-controlled, but the reconciliation against the (unforgeable) end of file is not.
+			if (offset + END_OF_CENTRAL_DIR_LENGTH + commentLength == size) {
+				const reachability = await getCentralDirectoryReachability(reader, anchoredView, anchoredOffset, indexByte, offset, size, remoteProbeBudget);
+				if (reachability == CENTRAL_DIRECTORY_REACHABLE) {
+					if (!endOfDirectoryInfo) {
+						endOfDirectoryInfo = {
+							offset,
+							buffer: anchoredArray.slice(indexByte, indexByte + END_OF_CENTRAL_DIR_LENGTH).buffer
+						};
+					}
+					endOfDirectoryReachingEndCount++;
+					// the canonical record (highest offset) is found first; a second one is enough to flag ambiguity
+					if (!rejectAmbiguous || endOfDirectoryReachingEndCount > 1) {
+						break;
+					}
+				} else if (reachability == CENTRAL_DIRECTORY_PLAUSIBLE && !plausibleEndOfDirectoryInfo) {
+					plausibleEndOfDirectoryInfo = {
+						offset,
+						buffer: anchoredArray.slice(indexByte, indexByte + END_OF_CENTRAL_DIR_LENGTH).buffer
+					};
+				}
 			}
 		}
 	}
+	if (!endOfDirectoryInfo) {
+		// no record points to a directory: prefer a plausible (empty) end-anchored record before scanning the
+		// tolerated window for a bare signature
+		endOfDirectoryInfo = plausibleEndOfDirectoryInfo;
+	}
+	if (!endOfDirectoryInfo) {
+		endOfDirectoryInfo = await seekEndOfCentralDirectory(reader, maxAppendedDataSize, remoteProbeBudget);
+	}
+	return { endOfDirectoryInfo, endOfDirectoryReachingEndCount };
+}
+
+// Fallback for findEndOfCentralDirectory when no record is end-anchored: appended data or an oversized comment
+// pushed the record's declared comment past the end of the file, so its position can no longer be reconciled
+// against the end of the file. Scans the tolerated window from the end and returns the first record that points
+// to a central directory, so a stray signature embedded in appended data cannot hijack discovery (which the
+// anchored scan already prevents for anchored records). Falls back to the first plausible (empty) record, then
+// to the last bare signature, so a degenerate archive still opens as before. The window ends at the file, so the
+// same in-window / metered reads as the anchored scan apply.
+async function seekEndOfCentralDirectory(reader, maxAppendedDataSize, remoteProbeBudget) {
+	const { size } = reader;
+	const searchLength = Math.min(size, maxAppendedDataSize == Infinity ? size :
+		END_OF_CENTRAL_DIR_LENGTH + MAX_16_BITS + maxAppendedDataSize);
+	const searchOffset = size - searchLength;
+	const searchArray = await readUint8Array(reader, searchOffset, searchLength);
+	const searchView = getDataView$1(searchArray);
+	let firstSignatureInfo, plausibleInfo;
+	for (let indexByte = searchArray.length - END_OF_CENTRAL_DIR_LENGTH; indexByte >= 0; indexByte--) {
+		if (getUint32(searchView, indexByte) == END_OF_CENTRAL_DIR_SIGNATURE) {
+			const offset = searchOffset + indexByte;
+			const record = { offset, buffer: searchArray.slice(indexByte, indexByte + END_OF_CENTRAL_DIR_LENGTH).buffer };
+			if (!firstSignatureInfo) {
+				firstSignatureInfo = record;
+			}
+			const reachability = await getCentralDirectoryReachability(reader, searchView, searchOffset, indexByte, offset, size, remoteProbeBudget);
+			if (reachability == CENTRAL_DIRECTORY_REACHABLE) {
+				return record;
+			}
+			if (reachability == CENTRAL_DIRECTORY_PLAUSIBLE && !plausibleInfo) {
+				plausibleInfo = record;
+			}
+		}
+	}
+	return plausibleInfo || firstSignatureInfo;
+}
+
+// Ranks how strongly an end-anchored candidate record is backed by an actual central directory, used to decide
+// which record is canonical and which count towards ambiguity. It is intentionally conservative and does not
+// fully parse the directory (the caller does that for the canonical record):
+//   - REACHABLE: the record dereferences a central directory (a central file header signature at the
+//     reconciled offset), or, for a zip64 record, the zip64 locator that a genuine zip64 archive places
+//     immediately before it. Only these count towards ambiguity.
+//   - PLAUSIBLE: the record describes an empty archive, which has no central directory to dereference. Its
+//     fields are indistinguishable from an empty end of central directory record forged inside a comment, so it
+//     is accepted only as a last resort and never inflates the ambiguity count.
+//   - UNREACHABLE: neither — stale append remnant or signature bytes embedded in a comment.
+// Signatures are read from the tail window (`view`, spanning `[anchoredOffset, size)`) when they fall inside it;
+// only a target below the window costs a (possibly remote) read, metered by `remoteProbeBudget` so a stuffed
+// comment cannot amplify into an unbounded number of requests.
+async function getCentralDirectoryReachability(reader, view, anchoredOffset, indexByte, offset, size, remoteProbeBudget) {
+	const filesLength = getUint16(view, indexByte + 10);
+	const directoryDataLength = getUint32(view, indexByte + 12);
+	const directoryDataOffset = getUint32(view, indexByte + 16);
+	if (filesLength == MAX_16_BITS || directoryDataLength == MAX_32_BITS || directoryDataOffset == MAX_32_BITS) {
+		// saturated fields imply a zip64 record; corroborate it with the zip64 end of central directory locator
+		// that sits immediately before it, so saturated bytes inside a comment cannot masquerade as one
+		const locatorSignature = await readSignature(reader, view, anchoredOffset, offset - ZIP64_END_OF_CENTRAL_DIR_LOCATOR_LENGTH, size, remoteProbeBudget);
+		return locatorSignature == ZIP64_END_OF_CENTRAL_DIR_LOCATOR_SIGNATURE ? CENTRAL_DIRECTORY_REACHABLE : CENTRAL_DIRECTORY_UNREACHABLE;
+	}
+	if (!filesLength && !directoryDataLength) {
+		// a valid empty archive has no central directory to dereference
+		return CENTRAL_DIRECTORY_PLAUSIBLE;
+	}
+	// the central directory ends where this record starts; reconcile the stored offset against that actual
+	// position (see stored_cd_offset ⟺ eocd_pos − cd_size) so prepended data does not hide the directory
+	for (const centralDirectoryOffset of [offset - directoryDataLength, directoryDataOffset]) {
+		if (await readSignature(reader, view, anchoredOffset, centralDirectoryOffset, size, remoteProbeBudget) == CENTRAL_FILE_HEADER_SIGNATURE) {
+			return CENTRAL_DIRECTORY_REACHABLE;
+		}
+	}
+	return CENTRAL_DIRECTORY_UNREACHABLE;
+}
+
+// Reads a 4-byte little-endian signature at `signatureOffset`, served from the tail window (`view`, spanning
+// `[anchoredOffset, size)`) when it falls inside it and otherwise from a metered (possibly remote) read. Returns
+// UNDEFINED_VALUE when the position is out of range or the out-of-window read budget is exhausted.
+async function readSignature(reader, view, anchoredOffset, signatureOffset, size, remoteProbeBudget) {
+	if (signatureOffset < 0 || signatureOffset + 4 > size) {
+		return UNDEFINED_VALUE;
+	}
+	if (signatureOffset >= anchoredOffset) {
+		// the target sits inside the tail window already in memory: no extra read needed
+		return getUint32(view, signatureOffset - anchoredOffset);
+	}
+	if (remoteProbeBudget.count > 0) {
+		remoteProbeBudget.count--;
+		const signatureArray = await readUint8Array(reader, signatureOffset, 4);
+		return getUint32(getDataView$1(signatureArray), 0);
+	}
+	// out of budget: leave this candidate unverified rather than issue another read
+	return UNDEFINED_VALUE;
 }
 
 function checkLocalDirectory(zipEntry, localDirectory, rawLocalFilename) {
@@ -4782,10 +4974,6 @@ function getUint32(view, offset) {
 
 function getBigUint64(view, offset) {
 	return Number(view.getBigUint64(offset, true));
-}
-
-function setUint32$1(view, offset, value) {
-	view.setUint32(offset, value, true);
 }
 
 function getDataView$1(array) {
