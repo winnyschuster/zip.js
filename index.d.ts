@@ -922,13 +922,16 @@ export interface GetEntriesOptions {
    * record must sit exactly at the end of the file, no data may precede the zip structure, and the local file
    * headers must agree with the central directory records. Equivalent to {@link GetEntriesOptions#checkAmbiguity}
    * set to `true`.
-   * - `"balanced"`: select the last end of central directory record whose comment reaches the end of the file,
-   * ignore stale records left by in-place updates, and tolerate a self-extracting stub or up to
+   * - `"balanced"`: select the last end of central directory record whose comment reaches the end of the file
+   * and that points to a central directory, ignore stale records left by in-place updates as well as records
+   * forged inside a comment, and tolerate a self-extracting stub or up to
    * {@link GetEntriesOptions#maxAppendedDataSize} bytes of appended data. Throw an {@link ERR_AMBIGUOUS_ARCHIVE}
    * error only when two or more records reach the end of the file and each points to a central directory, which
-   * cannot be disambiguated.
+   * cannot be disambiguated. A record that reaches the end of the file but points to no central directory (an
+   * empty archive) is only selected when no record points to one.
    * - `"tolerant"`: never reject; recover by selecting the last end of central directory record that reaches the
-   * end of the file (or the last one found otherwise).
+   * end of the file and points to a central directory (or, failing that, the last one that reaches the end of
+   * the file).
    *
    * @defaultValue "balanced"
    */

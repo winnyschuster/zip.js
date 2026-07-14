@@ -64,9 +64,42 @@ async function test() {
 		} finally {
 			await stuffedZipReader.close();
 		}
+
+		// a comment whose bytes happen to end in an end of central directory record that points to no central
+		// directory must not forge a second record: an empty record (files = 0, central directory length = 0) is
+		// unfalsifiable, and a saturated (zip64-looking) record without its locator is not backed by anything.
+		// Either would previously outrank the genuine directory — the archive was refused as ambiguous, or read
+		// as empty under tolerant. The real directory must win under every strictness level instead.
+		const emptyRecordComment = fakeEndOfDirectoryRecord({});
+		const saturatedRecordComment = fakeEndOfDirectoryRecord({ filesLength: 0xFFFF, directoryDataLength: 0xFFFFFFFF, directoryDataOffset: 0xFFFFFFFF });
+		for (const strictness of ["strict", "balanced", "tolerant"]) {
+			await expectFilenames(await buildZip(["real.txt"], emptyRecordComment), ["real.txt"], { strictness });
+			await expectFilenames(await buildZip(["real.txt"], saturatedRecordComment), ["real.txt"], { strictness });
+		}
+
+		// a genuine empty archive (no reachable directory to point at) must still open under every strictness
+		// level, including behind a self-extracting stub
+		const emptyArchive = await buildZip([]);
+		for (const strictness of ["strict", "balanced", "tolerant"]) {
+			await expectFilenames(emptyArchive, [], { strictness });
+		}
+		await expectFilenames(concat(new Uint8Array(500).fill(0x90), emptyArchive), []);
 	} finally {
 		await zip.terminateWorkers();
 	}
+}
+
+// builds a bare 22-byte end of central directory record with the given fields, used as archive-comment bytes
+// that impersonate a second record
+function fakeEndOfDirectoryRecord({ filesLength = 0, directoryDataLength = 0, directoryDataOffset = 0 }) {
+	const record = new Uint8Array(22);
+	const view = new DataView(record.buffer);
+	view.setUint32(0, END_OF_CENTRAL_DIR_SIGNATURE, true);
+	view.setUint16(8, filesLength, true);
+	view.setUint16(10, filesLength, true);
+	view.setUint32(12, directoryDataLength, true);
+	view.setUint32(16, directoryDataOffset, true);
+	return record;
 }
 
 // counts every readUint8Array call so a test can assert the reader is not driven into unbounded I/O
