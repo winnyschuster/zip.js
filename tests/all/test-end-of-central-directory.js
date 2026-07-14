@@ -41,6 +41,14 @@ async function test() {
 		await expectFilenames(largeAppended, ["a.txt"], { strictness: "tolerant" });
 		await expectFilenames(largeAppended, ["a.txt"], { maxAppendedDataSize: 128 * 1024 });
 
+		// an explicit maxAppendedDataSize takes precedence over the strictness default at every level, including
+		// tolerant (which otherwise never rejects): data over the cap but within the search window is reported as
+		// appended data, while a cap too small to reach the record surfaces the record as missing
+		const withinWindow = appendFiller(base, 2048);
+		await expectFilenames(withinWindow, ["a.txt"], { strictness: "tolerant" });
+		await expectAmbiguous(withinWindow, "appended data", { strictness: "tolerant", maxAppendedDataSize: 1024 });
+		await expectError(largeAppended, zip.ERR_EOCDR_NOT_FOUND, { strictness: "tolerant", maxAppendedDataSize: 1024 });
+
 		// a clean archive reads identically under every strictness level
 		const clean = await buildZip(["x.txt", "y.txt"]);
 		for (const strictness of ["strict", "balanced", "tolerant"]) {
@@ -200,6 +208,20 @@ async function expectAmbiguous(array, reason, options) {
 		throw new Error("expected an ambiguous archive error (" + reason + ")");
 	} catch (error) {
 		if (error.message != zip.ERR_AMBIGUOUS_ARCHIVE || error.reason != reason) {
+			throw error;
+		}
+	} finally {
+		await zipReader.close();
+	}
+}
+
+async function expectError(array, message, options) {
+	const zipReader = new zip.ZipReader(new zip.Uint8ArrayReader(array), options);
+	try {
+		await zipReader.getEntries();
+		throw new Error("expected error: " + message);
+	} catch (error) {
+		if (error.message != message) {
 			throw error;
 		}
 	} finally {

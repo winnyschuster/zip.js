@@ -929,17 +929,24 @@ export interface GetEntriesOptions {
    * error only when two or more records reach the end of the file and each points to a central directory, which
    * cannot be disambiguated. A record that reaches the end of the file but points to no central directory (an
    * empty archive) is only selected when no record points to one.
-   * - `"tolerant"`: never reject; recover by selecting the last end of central directory record that reaches the
-   * end of the file and points to a central directory (or, failing that, the last one that reaches the end of
-   * the file).
+   * - `"tolerant"`: never reject a parseable archive, except when {@link GetEntriesOptions#maxAppendedDataSize}
+   * is set explicitly and exceeded; recover by selecting the last end of central directory record that reaches
+   * the end of the file and points to a central directory (or, failing that, the last one that reaches the end
+   * of the file).
    *
    * @defaultValue "balanced"
    */
   strictness?: "strict" | "balanced" | "tolerant";
   /**
-   * The maximum number of bytes tolerated after the zip structure before an {@link ERR_AMBIGUOUS_ARCHIVE} error
-   * is thrown. Defaults to `0` when {@link GetEntriesOptions#strictness} is `"strict"`, `65535` when it is
-   * `"balanced"`, and `Infinity` when it is `"tolerant"`.
+   * The maximum number of bytes tolerated after the zip structure before the archive is rejected. Defaults to
+   * `0` when {@link GetEntriesOptions#strictness} is `"strict"`, `65535` when it is `"balanced"`, and `Infinity`
+   * when it is `"tolerant"`.
+   *
+   * An explicit value takes precedence over the strictness default at every level, so it can loosen `"strict"`
+   * or reintroduce a rejection under `"tolerant"`. It also bounds how far back the end of central directory
+   * record is searched for, so a value smaller than the amount of data actually appended surfaces an
+   * {@link ERR_EOCDR_NOT_FOUND} error when the record lies beyond the searched region and an
+   * {@link ERR_AMBIGUOUS_ARCHIVE} error otherwise.
    */
   maxAppendedDataSize?: number;
 }
