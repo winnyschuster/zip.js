@@ -47,9 +47,12 @@
 - [HttpOptions](interfaces/HttpOptions.md)
 - [HttpRangeOptions](interfaces/HttpRangeOptions.md)
 - [Initializable](interfaces/Initializable.md)
+- [OPFSTempStreamOptions](interfaces/OPFSTempStreamOptions.md)
 - [ReadableReader](interfaces/ReadableReader.md)
+- [TempStream](interfaces/TempStream.md)
 - [WorkerConfiguration](interfaces/WorkerConfiguration.md)
 - [WritableWriter](interfaces/WritableWriter.md)
+- [ZipDirectoryEntryExportFileSystemHandleOptions](interfaces/ZipDirectoryEntryExportFileSystemHandleOptions.md)
 - [ZipDirectoryEntryExportOptions](interfaces/ZipDirectoryEntryExportOptions.md)
 - [ZipDirectoryEntryImportHttpOptions](interfaces/ZipDirectoryEntryImportHttpOptions.md)
 - [ZipReaderConstructorOptions](interfaces/ZipReaderConstructorOptions.md)
@@ -102,5 +105,6 @@
 ## Functions
 
 - [configure](functions/configure.md)
+- [createOPFSTempStream](functions/createOPFSTempStream.md)
 - [getMimeType](functions/getMimeType.md)
 - [terminateWorkers](functions/terminateWorkers.md)

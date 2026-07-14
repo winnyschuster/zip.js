@@ -2,13 +2,13 @@
 
 ***
 
-[@zip.js/zip.js](../globals.md) / EntryGetDataCheckPasswordOptions
+[@zip.js/zip.js](../globals.md) / ZipDirectoryEntryExportFileSystemHandleOptions
 
-# Interface: EntryGetDataCheckPasswordOptions
+# Interface: ZipDirectoryEntryExportFileSystemHandleOptions
 
-Defined in: [index.d.ts:1300](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L1300)
+Defined in: [index.d.ts:2326](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L2326)
 
-Represents the options passed to [FileEntry#getData](FileEntry.md#getdata) and `{@link ZipFileEntry}.get*`.
+Represents the options passed to [ZipDirectoryEntry#exportFileSystemHandle](../classes/ZipDirectoryEntry.md#exportfilesystemhandle) and [FS#exportFileSystemHandle](../classes/FS.md#exportfilesystemhandle).
 
 ## Extends
 
@@ -123,6 +123,22 @@ false
 #### Inherited from
 
 [`EntryGetDataOptions`](EntryGetDataOptions.md).[`checkSignature`](EntryGetDataOptions.md#checksignature)
+
+***
+
+### concurrent?
+
+> `optional` **concurrent?**: `boolean`
+
+Defined in: [index.d.ts:2333](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L2333)
+
+`true` to write independent files concurrently instead of one after another.
+
+#### Default Value
+
+```ts
+false
+```
 
 ***
 

@@ -6,7 +6,7 @@
 
 # Interface: ReadableReader
 
-Defined in: [index.d.ts:346](https://github.com/gildas-lormeau/zip.js/blob/65178e72a3d88c674dd7152f80ef791465744538/index.d.ts#L346)
+Defined in: [index.d.ts:400](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L400)
 
 Represents an instance used to read data from a `ReadableStream` instance.
 
@@ -16,6 +16,6 @@ Represents an instance used to read data from a `ReadableStream` instance.
 
 > **readable**: `ReadableStream`
 
-Defined in: [index.d.ts:350](https://github.com/gildas-lormeau/zip.js/blob/65178e72a3d88c674dd7152f80ef791465744538/index.d.ts#L350)
+Defined in: [index.d.ts:404](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L404)
 
 The `ReadableStream` instance.

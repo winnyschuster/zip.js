@@ -6,7 +6,7 @@
 
 # Interface: GetEntriesOptions
 
-Defined in: [index.d.ts:836](https://github.com/gildas-lormeau/zip.js/blob/65178e72a3d88c674dd7152f80ef791465744538/index.d.ts#L836)
+Defined in: [index.d.ts:890](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L890)
 
 Represents options passed to the constructor of [ZipReader](../classes/ZipReader.md), [ZipReader#getEntries](../classes/ZipReader.md#getentries) and [ZipReader#getEntriesGenerator](../classes/ZipReader.md#getentriesgenerator).
 
@@ -21,7 +21,7 @@ Represents options passed to the constructor of [ZipReader](../classes/ZipReader
 
 > `optional` **checkAmbiguity?**: `boolean`
 
-Defined in: [index.d.ts:863](https://github.com/gildas-lormeau/zip.js/blob/65178e72a3d88c674dd7152f80ef791465744538/index.d.ts#L863)
+Defined in: [index.d.ts:917](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L917)
 
 `true` to throw an [ERR\_AMBIGUOUS\_ARCHIVE](../variables/ERR_AMBIGUOUS_ARCHIVE.md) error when the archive could be parsed differently by other
 tools. This detects data before or after the zip structure (e.g. a self-extracting archive stub or a
@@ -42,7 +42,7 @@ false
 
 > `optional` **commentEncoding?**: `string`
 
-Defined in: [index.d.ts:844](https://github.com/gildas-lormeau/zip.js/blob/65178e72a3d88c674dd7152f80ef791465744538/index.d.ts#L844)
+Defined in: [index.d.ts:898](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L898)
 
 The encoding of the comment of the entry.
 
@@ -52,9 +52,59 @@ The encoding of the comment of the entry.
 
 > `optional` **filenameEncoding?**: `string`
 
-Defined in: [index.d.ts:840](https://github.com/gildas-lormeau/zip.js/blob/65178e72a3d88c674dd7152f80ef791465744538/index.d.ts#L840)
+Defined in: [index.d.ts:894](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L894)
 
 The encoding of the filename of the entry.
+
+***
+
+### maxAppendedDataSize?
+
+> `optional` **maxAppendedDataSize?**: `number`
+
+Defined in: [index.d.ts:951](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L951)
+
+The maximum number of bytes tolerated after the zip structure before the archive is rejected. Defaults to
+`0` when [GetEntriesOptions#strictness](ZipReaderGetEntriesOptions.md#strictness) is `"strict"`, `65535` when it is `"balanced"`, and `Infinity`
+when it is `"tolerant"`.
+
+An explicit value takes precedence over the strictness default at every level, so it can loosen `"strict"`
+or reintroduce a rejection under `"tolerant"`. It also bounds how far back the end of central directory
+record is searched for, so a value smaller than the amount of data actually appended surfaces an
+[ERR\_EOCDR\_NOT\_FOUND](../variables/ERR_EOCDR_NOT_FOUND.md) error when the record lies beyond the searched region and an
+[ERR\_AMBIGUOUS\_ARCHIVE](../variables/ERR_AMBIGUOUS_ARCHIVE.md) error otherwise.
+
+***
+
+### strictness?
+
+> `optional` **strictness?**: `"balanced"` \| `"strict"` \| `"tolerant"`
+
+Defined in: [index.d.ts:939](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L939)
+
+How tolerant the reader should be when the archive can be parsed in more than one way.
+
+- `"strict"`: reject anything another tool could interpret differently. The end of central directory
+record must sit exactly at the end of the file, no data may precede the zip structure, and the local file
+headers must agree with the central directory records. Equivalent to [GetEntriesOptions#checkAmbiguity](ZipReaderGetEntriesOptions.md#checkambiguity)
+set to `true`.
+- `"balanced"`: select the last end of central directory record whose comment reaches the end of the file
+and that points to a central directory, ignore stale records left by in-place updates as well as records
+forged inside a comment, and tolerate a self-extracting stub or up to
+[GetEntriesOptions#maxAppendedDataSize](#maxappendeddatasize) bytes of appended data. Throw an [ERR\_AMBIGUOUS\_ARCHIVE](../variables/ERR_AMBIGUOUS_ARCHIVE.md)
+error only when two or more records reach the end of the file and each points to a central directory, which
+cannot be disambiguated. A record that reaches the end of the file but points to no central directory (an
+empty archive) is only selected when no record points to one.
+- `"tolerant"`: never reject a parseable archive, except when [GetEntriesOptions#maxAppendedDataSize](#maxappendeddatasize)
+is set explicitly and exceeded; recover by selecting the last end of central directory record that reaches
+the end of the file and points to a central directory (or, failing that, the last one that reaches the end
+of the file).
+
+#### Default Value
+
+```ts
+"balanced"
+```
 
 ## Methods
 
@@ -62,7 +112,7 @@ The encoding of the filename of the entry.
 
 > `optional` **decodeText**(`value`, `encoding`): `string` \| `undefined`
 
-Defined in: [index.d.ts:852](https://github.com/gildas-lormeau/zip.js/blob/65178e72a3d88c674dd7152f80ef791465744538/index.d.ts#L852)
+Defined in: [index.d.ts:906](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L906)
 
 The function called for decoding the filename and the comment of the entry.
 
