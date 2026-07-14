@@ -57,6 +57,14 @@ async function test() {
 		await expectAmbiguous(withinWindow, "appended data", { strictness: "tolerant", maxAppendedDataSize: 1024 });
 		await expectError(largeAppended, zip.ERR_EOCDR_NOT_FOUND, { strictness: "tolerant", maxAppendedDataSize: 1024 });
 
+		// appended data that embeds a stray end of central directory signature nearer the end than the real
+		// record must not hijack the fallback used when no record is end-anchored: skipping the stray signature,
+		// the reader recovers the record that actually points to a directory
+		const strayFiller = appendFiller(base, 200);
+		new DataView(strayFiller.buffer).setUint32(base.length + 40, END_OF_CENTRAL_DIR_SIGNATURE, true);
+		await expectFilenames(strayFiller, ["a.txt"], { strictness: "tolerant" });
+		await expectFilenames(strayFiller, ["a.txt"], { maxAppendedDataSize: 1024 });
+
 		// a clean archive reads identically under every strictness level
 		const clean = await buildZip(["x.txt", "y.txt"]);
 		for (const strictness of ["strict", "balanced", "tolerant"]) {
