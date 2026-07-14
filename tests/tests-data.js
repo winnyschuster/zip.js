@@ -17,6 +17,7 @@ export default ([
 	{ title: "Filesystem getArrayBuffer", script: "./test-fs-array-buffer.js" },
 	{ title: "Base 64", script: "./test-base64.js" },
 	{ title: "Ambiguity check", script: "./test-check-ambiguity.js" },
+	{ title: "End of central directory selection", script: "./test-end-of-central-directory.js" },
 	{ title: "Malformed zip files", script: "./test-malformed-zip.js" },
 	{ title: "Invalid chunk size configuration", script: "./test-config-chunk-size.js" },
 	{ title: "Writer edge cases", script: "./test-writer-edge-cases.js" },

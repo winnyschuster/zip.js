@@ -915,12 +915,45 @@ export interface GetEntriesOptions {
    * @defaultValue false
    */
   checkAmbiguity?: boolean;
+  /**
+   * How tolerant the reader should be when the archive can be parsed in more than one way.
+   *
+   * - `"strict"`: reject anything another tool could interpret differently. The end of central directory
+   * record must sit exactly at the end of the file, no data may precede the zip structure, and the local file
+   * headers must agree with the central directory records. Equivalent to {@link GetEntriesOptions#checkAmbiguity}
+   * set to `true`.
+   * - `"balanced"`: select the last end of central directory record whose comment reaches the end of the file,
+   * ignore stale records left by in-place updates, and tolerate a self-extracting stub or up to
+   * {@link GetEntriesOptions#maxAppendedDataSize} bytes of appended data. Throw an {@link ERR_AMBIGUOUS_ARCHIVE}
+   * error only when two or more records reach the end of the file and each points to a central directory, which
+   * cannot be disambiguated.
+   * - `"tolerant"`: never reject; recover by selecting the last end of central directory record that reaches the
+   * end of the file (or the last one found otherwise).
+   *
+   * @defaultValue "balanced"
+   */
+  strictness?: "strict" | "balanced" | "tolerant";
+  /**
+   * The maximum number of bytes tolerated after the zip structure before an {@link ERR_AMBIGUOUS_ARCHIVE} error
+   * is thrown. Defaults to `0` when {@link GetEntriesOptions#strictness} is `"strict"`, `65535` when it is
+   * `"balanced"`, and `Infinity` when it is `"tolerant"`.
+   */
+  maxAppendedDataSize?: number;
 }
 
 /**
  * Represents options passed to the constructor of {@link ZipReader} and {@link FileEntry#getData}.
  */
 export interface ZipReaderOptions {
+  /**
+   * How tolerant the reader should be when the local file header of an entry disagrees with its central
+   * directory record. `"strict"` throws an {@link ERR_AMBIGUOUS_ARCHIVE} error (equivalent to
+   * {@link ZipReaderOptions#checkAmbiguity} set to `true`); `"balanced"` and `"tolerant"` trust the central
+   * directory record.
+   *
+   * @defaultValue "balanced"
+   */
+  strictness?: "strict" | "balanced" | "tolerant";
   /**
    * `true` to throw an {@link ERR_AMBIGUOUS_ARCHIVE} error when calling {@link FileEntry#getData} if the local
    * file header of the entry disagrees with its central directory record in a way that could make other tools
