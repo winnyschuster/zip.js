@@ -20,6 +20,14 @@ async function test() {
 		const appendRemnant = concat(oldZip, newZip);
 		await expectFilenames(appendRemnant, ["old1.txt", "old2.txt", "added.txt"]);
 
+		// when the appended archive shares the byte layout of the one it followed, the stale central directory
+		// offset still lands on the previous (identical) directory. Selecting it would expose the stale directory,
+		// so the reconciled offset — anchored to the end of the file — must be preferred and the appended
+		// directory (identical filename length keeps both halves byte-aligned) wins
+		const firstHalf = await buildZip(["reala.txt"]);
+		const secondHalf = await buildZip(["evilb.txt"]);
+		await expectFilenames(concat(firstHalf, secondHalf), ["evilb.txt"]);
+
 		// a comment-cloak polyglot embeds a whole second archive inside the outer record's comment, so two
 		// records reach the end of the file and each dereferences to a central directory: genuinely ambiguous
 		const inner = await buildZip(["evil.sh"]);
