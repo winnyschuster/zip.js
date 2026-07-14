@@ -128,11 +128,16 @@ median of 3:
 - **Deno** runs `CompressionStream` on the isolate thread, so concurrent `add()` alone
   gives no speedup (1.82 s ≈ its 1.84 s sequential). Set `useWebWorkers: true` and it
   parallelizes properly (0.47 s), landing right beside the others.
+- **Browsers vary by engine.** Safari/WebKit runs `CompressionStream` on the main thread
+  (serial, like Deno), so use `useWebWorkers: true` there. Chromium implements it
+  separately and may behave differently — check a given browser by compressing several
+  large buffers through `CompressionStream` sequentially versus concurrently and comparing
+  the wall time.
 
-**Rule of thumb:** on Node and Bun, concurrent `add()` is enough; on Deno, also set
-`useWebWorkers: true`. Web Workers are the portable way to get this parallelism on any
-runtime — and the only way once you use a non-default level (which switches to the WASM
-codec).
+**Rule of thumb:** on Node and Bun, concurrent `add()` is enough; on Deno and
+Safari/WebKit, also set `useWebWorkers: true`. Web Workers are the portable way to get
+this parallelism on any runtime — and the only way once you use a non-default level
+(which switches to the WASM codec).
 
 ## Decompression
 
