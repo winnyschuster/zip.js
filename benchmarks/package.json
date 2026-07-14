@@ -5,6 +5,8 @@
   "description": "Fair, reproducible benchmarks: @zip.js/zip.js vs jszip, fflate, archiver",
   "scripts": {
     "bench": "node bench.js",
+    "bench:backends": "node bench-backends.js",
+    "bench:crc": "node bench-crc.js",
     "corpus": "node lib/corpus.js"
   },
   "devDependencies": {
