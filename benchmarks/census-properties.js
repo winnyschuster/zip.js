@@ -13,9 +13,9 @@ const WORKER_ARTIFACTS = ["dist/zip-web-worker.js", "dist/zip-web-worker-native.
 const bundlePath = process.argv[2] || path.join(ROOT, "index.min.js");
 const jsonPath = process.argv[3];
 
-const bundle = { counts: new Map(), quoted: new Set(), stringTokens: new Set() };
+const bundle = { counts: new Map(), accessCounts: new Map(), quoted: new Set(), stringTokens: new Set() };
 collectNames(bundlePath, bundle);
-const worker = { counts: new Map(), quoted: new Set(), stringTokens: new Set() };
+const worker = { counts: new Map(), accessCounts: new Map(), quoted: new Set(), stringTokens: new Set() };
 for (const artifact of WORKER_ARTIFACTS) {
 	const artifactPath = path.join(ROOT, artifact);
 	if (existsSync(artifactPath)) {
@@ -69,8 +69,25 @@ console.log("\ntop clean candidates:");
 for (const { name, count, bytes } of cleanCandidates.slice(0, 30)) {
 	console.log("  " + String(count).padStart(5) + "x " + name.padEnd(32) + String(bytes).padStart(6) + " B");
 }
+const hoistable = [];
+for (const [className, entries] of Object.entries(classes)) {
+	if (className != "candidate") {
+		for (const { name } of entries) {
+			const accessCount = bundle.accessCounts.get(name) || 0;
+			const saving = accessCount * (name.length - 2) - name.length - 6;
+			if (saving >= 30) {
+				hoistable.push({ name, className, accessCount, saving });
+			}
+		}
+	}
+}
+hoistable.sort((first, second) => second.saving - first.saving);
+console.log("\nhoistable unmangleable names (const string + bracket access, plain accesses only):");
+for (const { name, className, accessCount, saving } of hoistable.slice(0, 25)) {
+	console.log("  " + String(accessCount).padStart(5) + "x " + name.padEnd(32) + "~" + String(saving).padStart(5) + " B  " + className);
+}
 if (jsonPath) {
-	writeFileSync(jsonPath, JSON.stringify(classes, null, "\t"));
+	writeFileSync(jsonPath, JSON.stringify({ classes, hoistable }, null, "\t"));
 	console.log("\nwritten:", jsonPath);
 }
 
@@ -84,6 +101,7 @@ function collectNames(filePath, target) {
 		}
 		if (ts.isPropertyAccessExpression(node) && ts.isIdentifier(node.name)) {
 			count(node.name.text);
+			target.accessCounts.set(node.name.text, (target.accessCounts.get(node.name.text) || 0) + 1);
 		} else if (ts.isElementAccessExpression(node) && ts.isStringLiteralLike(node.argumentExpression)) {
 			target.quoted.add(node.argumentExpression.text);
 		} else if (ts.isBinaryExpression(node) && node.operatorToken.kind == ts.SyntaxKind.InKeyword && ts.isStringLiteralLike(node.left)) {
