@@ -1,4 +1,4 @@
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 
 const ENTRIES_LENGTH = 20;
 const MIN_SEGMENT_SIZE = 700;

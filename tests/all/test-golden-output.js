@@ -1,6 +1,6 @@
 /* global crypto, TextEncoder, Blob */
 
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 
 // deterministic archive: any change to this hash means the serialization format changed
 const EXPECTED_SHA256 = "0eb6ed0909d29aaeb8a244d7f9657c4c11bcd1dc91126a2574892dca8e7c1961";

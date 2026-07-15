@@ -1,4 +1,4 @@
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 
 const GOOD_CONTENT = "good-content-".repeat(50);
 const SEGMENT_SIZE = 400;

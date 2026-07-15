@@ -1,4 +1,4 @@
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 
 export { test };
 

@@ -1,6 +1,6 @@
 /* global Blob, setTimeout */
 
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 
 const KB = 1024;
 const ENTRIES_DATA = [

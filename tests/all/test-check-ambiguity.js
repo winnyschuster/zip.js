@@ -1,4 +1,4 @@
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 
 const CONTENTS = ["alpha-content", "beta-content!"];
 const EXTRA_DATA_LENGTH = 64;

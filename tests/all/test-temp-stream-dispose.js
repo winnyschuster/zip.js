@@ -5,7 +5,7 @@
 // (files, OPFS handles, ...) rely on to release their resource, since the error path otherwise
 // abandons the stream without closing or cancelling it.
 
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 
 const TEXT_CONTENT = "Lorem ipsum dolor sit amet, consectetuer adipiscing elit. ".repeat(64);
 const BLOB = new Blob([TEXT_CONTENT], { type: "text/plain" });

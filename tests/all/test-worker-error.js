@@ -1,6 +1,6 @@
 /* global URL, setTimeout, clearTimeout */
 
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 import { getConfiguration } from "../../lib/core/configuration.js";
 
 const TEXT_CONTENT = "Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod tincidunt ut laoreet dolore magna aliquam erat volutpat.";

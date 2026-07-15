@@ -1,4 +1,4 @@
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 
 const END_OF_CENTRAL_DIR_SIGNATURE = 0x06054b50;
 

@@ -1,6 +1,6 @@
 /* global Blob */
 
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 
 const TEXT_CONTENT = "";
 const FILENAME = "lorem.txt";

@@ -5,7 +5,7 @@
 // incompressible entry spills to a real OPFS file; the temp directory is checked to be empty
 // afterwards (no leak) and the archive is verified to round-trip byte-for-byte.
 
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 
 const DIRECTORY_NAME = ".zip.js-temp";
 

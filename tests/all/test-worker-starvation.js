@@ -1,6 +1,6 @@
 /* global TransformStream, setTimeout, clearTimeout, navigator */
 
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 
 const ENTRIES_LENGTH = 4;
 const MAX_WORKERS = 2;

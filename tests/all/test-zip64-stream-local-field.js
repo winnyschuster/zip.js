@@ -1,6 +1,6 @@
 /* global ReadableStream, TextEncoder, Blob */
 
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 
 const CONTENT = "hello zip64 streaming ".repeat(8);
 

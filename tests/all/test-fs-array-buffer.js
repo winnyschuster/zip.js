@@ -1,6 +1,6 @@
 /* global Blob, TextEncoder */
 
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 
 const PASSWORD = "secret";
 const TEXT = "Lorem ipsum dolor sit amet.";

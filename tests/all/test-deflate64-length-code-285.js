@@ -1,6 +1,6 @@
 /* global URL */
 
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 import { getConfiguration } from "../../lib/core/configuration.js";
 import { CompressionStreamZlib, DecompressionStreamZlib } from "../../lib/core/streams/zlib-js/zlib-streams.min.js";
 

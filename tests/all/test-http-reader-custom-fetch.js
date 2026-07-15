@@ -1,6 +1,6 @@
 /* global Response, Headers */
 
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 
 const TEXT_CONTENT = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
 const FILENAME = "lorem.txt";

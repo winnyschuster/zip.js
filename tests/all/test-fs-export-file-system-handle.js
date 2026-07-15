@@ -5,7 +5,7 @@
 // the mock received the exact directory structure and bytes. Both the sequential and concurrent
 // strategies are covered.
 
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 
 const TEXT_ENCODER = new TextEncoder();
 

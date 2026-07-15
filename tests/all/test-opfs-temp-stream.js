@@ -7,7 +7,7 @@
 // OPFS/File System Access surface the helper actually uses, so passing here means the real OPFS
 // path is wired correctly.
 
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 
 export { test };
 

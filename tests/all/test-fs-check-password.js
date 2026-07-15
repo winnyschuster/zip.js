@@ -1,6 +1,6 @@
 /* global URL */
 
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 
 const url = new URL("./../data/lorem.zip", import.meta.url).href;
 

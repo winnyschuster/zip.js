@@ -5,7 +5,7 @@
 // to the native CompressionStream, silently discarding the explicitly provided JS codec. It must now
 // keep that codec, because — unlike the WASM codec — it does not depend on the module.
 
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 import { getConfiguration } from "../../lib/core/configuration.js";
 import {
 	CompressionStreamZlib as JsDeflate,

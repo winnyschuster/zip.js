@@ -1,6 +1,6 @@
 /* global Blob */
 
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 // bash
 const TEXT_CONTENT = `#!/bin/bash
 echo "Hello, world!"

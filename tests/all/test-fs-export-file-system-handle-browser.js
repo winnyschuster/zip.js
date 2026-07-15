@@ -4,7 +4,7 @@
 // only). It builds a tree, exports it to an OPFS directory, then re-imports that directory with
 // FS#addFileSystemHandle and checks the round-trip matches. The OPFS directory is removed afterwards.
 
-import * as zip from "../../index.js";
+import * as zip from "../zip-lib.js";
 
 const DIRECTORY_NAME = ".zip.js-export-test";
 const TEXT_ENCODER = new TextEncoder();
