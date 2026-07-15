@@ -8,9 +8,10 @@
 		"exclude": [
 			"dist/*.js",
 			"*-inline.js",
-			"tests/vendor/*.js",
-			"index.cjs",
-			"index.min.js"
+			"tests/",
+			"benchmarks/",
+			"**/*.cjs",
+			"**/*.min.js"
 		]
 	},
 	"exclude": [
