@@ -6957,7 +6957,7 @@
 			if (!writer || (writer.constructor == zipEntry.Writer && zipEntry.data)) {
 				return zipEntry.data;
 			} else {
-				const reader = zipEntry.reader = new zipEntry.Reader(zipEntry.data, options);
+				const reader = zipEntry.reader = createReader(zipEntry.Reader, zipEntry.data, options);
 				const uncompressedSize = zipEntry.data ? zipEntry.data.uncompressedSize : reader.size;
 				await Promise.all([initStream(reader), initStream(writer, uncompressedSize)]);
 				const { readable } = reader;
@@ -7554,6 +7554,10 @@
 		};
 	}
 
+	function createReader(Reader, data, options) {
+		return Reader.prototype ? new Reader(data, options) : Reader(data, options);
+	}
+
 	async function initReaders(entry, options) {
 		const fileEntries = [];
 		const pendingEntries = [entry];
@@ -7569,7 +7573,7 @@
 			}
 		}
 		await Promise.all(fileEntries.map(async child => {
-			const reader = child.reader = new child.Reader(child.data, options);
+			const reader = child.reader = createReader(child.Reader, child.data, options);
 			readers.set(child, reader);
 			try {
 				await initStream(reader);
