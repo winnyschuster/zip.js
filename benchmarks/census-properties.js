@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -25,8 +25,9 @@ for (const artifact of WORKER_ARTIFACTS) {
 const publicNames = collectDeclarationNames(path.join(ROOT, "index.d.ts"));
 const boundaryNames = collectBoundaryNames(path.join(ROOT, "rollup.config.js"));
 const builtinNames = new Set(domprops);
+const quotedSourceKeys = collectQuotedSourceKeys(path.join(ROOT, "lib"));
 
-const classes = { public: [], builtin: [], boundary: [], candidate: [] };
+const classes = { public: [], builtin: [], boundary: [], quoted: [], candidate: [] };
 for (const [name, count] of bundle.counts) {
 	const flags = [];
 	if (bundle.quoted.has(name) || bundle.stringTokens.has(name)) {
@@ -45,6 +46,8 @@ for (const [name, count] of bundle.counts) {
 		classes.boundary.push(entry);
 	} else if (publicNames.has(name)) {
 		classes.public.push(entry);
+	} else if (quotedSourceKeys.has(name)) {
+		classes.quoted.push(entry);
 	} else {
 		classes.candidate.push(entry);
 	}
@@ -157,6 +160,35 @@ function collectDeclarationNames(filePath) {
 			names.add(node.name.text);
 		}
 		ts.forEachChild(node, visit);
+	}
+}
+
+function collectQuotedSourceKeys(directory) {
+	const keys = new Set();
+	visitDirectory(directory);
+	return keys;
+
+	function visitDirectory(directoryPath) {
+		for (const entry of readdirSync(directoryPath, { withFileTypes: true })) {
+			const entryPath = path.join(directoryPath, entry.name);
+			if (entry.isDirectory()) {
+				visitDirectory(entryPath);
+			} else if (entry.name.endsWith(".js") && !entry.name.includes("-inline") && !entry.name.endsWith(".min.js")) {
+				collectFromFile(entryPath);
+			}
+		}
+	}
+
+	function collectFromFile(filePath) {
+		const source = ts.createSourceFile(filePath, readFileSync(filePath, "utf8"), ts.ScriptTarget.Latest, true);
+		visit(source);
+
+		function visit(node) {
+			if (ts.isPropertyAssignment(node) && ts.isStringLiteralLike(node.name)) {
+				keys.add(node.name.text);
+			}
+			ts.forEachChild(node, visit);
+		}
 	}
 }
 
