@@ -4,6 +4,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { domprops } from "../node_modules/terser/tools/domprops.js";
+import { WORKER_BOUNDARY_PROPERTY_NAMES, collectDeclarationNames } from "../reserved-property-names.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const MAX_TOKENIZED_STRING_LENGTH = 200;
@@ -23,7 +24,7 @@ for (const artifact of WORKER_ARTIFACTS) {
 	}
 }
 const publicNames = collectDeclarationNames(path.join(ROOT, "index.d.ts"));
-const boundaryNames = collectBoundaryNames(path.join(ROOT, "rollup.config.js"));
+const boundaryNames = new Set(WORKER_BOUNDARY_PROPERTY_NAMES);
 const builtinNames = new Set(domprops);
 const quotedSourceKeys = collectQuotedSourceKeys(path.join(ROOT, "lib"));
 
@@ -145,24 +146,6 @@ function collectNames(filePath, target) {
 	}
 }
 
-function collectDeclarationNames(filePath) {
-	const names = new Set();
-	const source = ts.createSourceFile(filePath, readFileSync(filePath, "utf8"), ts.ScriptTarget.Latest, true);
-	visit(source);
-	return names;
-
-	function visit(node) {
-		if ((ts.isPropertySignature(node) || ts.isMethodSignature(node) || ts.isPropertyDeclaration(node) ||
-			ts.isMethodDeclaration(node) || ts.isGetAccessorDeclaration(node) || ts.isSetAccessorDeclaration(node) ||
-			ts.isEnumMember(node) || ts.isParameter(node) || ts.isClassDeclaration(node) || ts.isInterfaceDeclaration(node) ||
-			ts.isFunctionDeclaration(node) || ts.isTypeAliasDeclaration(node) || ts.isVariableDeclaration(node)) &&
-			node.name && (ts.isIdentifier(node.name) || ts.isStringLiteralLike(node.name))) {
-			names.add(node.name.text);
-		}
-		ts.forEachChild(node, visit);
-	}
-}
-
 function collectQuotedSourceKeys(directory) {
 	const keys = new Set();
 	visitDirectory(directory);
@@ -192,8 +175,3 @@ function collectQuotedSourceKeys(directory) {
 	}
 }
 
-function collectBoundaryNames(configPath) {
-	const config = readFileSync(configPath, "utf8");
-	const startIndex = config.indexOf("[", config.indexOf("reserved"));
-	return new Set(JSON.parse(config.slice(startIndex, config.indexOf("]", startIndex) + 1)));
-}
