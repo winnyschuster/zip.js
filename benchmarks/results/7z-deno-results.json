@@ -1,0 +1,200 @@
+{
+  "generatedBy": "bench-7z.js",
+  "runtime": "deno 2.9.3",
+  "sevenZip": "7zz",
+  "runs": 3,
+  "rows": [
+    {
+      "op": "compress",
+      "workload": "text-20mb",
+      "contender": "zipjs-1t",
+      "label": "zip.js (1 thread)",
+      "medianMs": 420.801208,
+      "outputSize": 6209546
+    },
+    {
+      "op": "compress",
+      "workload": "text-20mb",
+      "contender": "zipjs-workers",
+      "label": "zip.js (workers)",
+      "medianMs": 426.39162499999975,
+      "outputSize": 6209546
+    },
+    {
+      "op": "compress",
+      "workload": "text-20mb",
+      "contender": "7z-mt",
+      "label": "7-Zip (multithread)",
+      "medianMs": 2606.4589159999996,
+      "outputSize": 5752577
+    },
+    {
+      "op": "compress",
+      "workload": "text-20mb",
+      "contender": "7z-fast",
+      "label": "7-Zip (fast -mx=1)",
+      "medianMs": 470.2735840000005,
+      "outputSize": 6773416
+    },
+    {
+      "op": "decompress",
+      "workload": "text-20mb",
+      "contender": "zipjs-1t",
+      "label": "zip.js (1 thread)",
+      "medianMs": 75.92950000000019,
+      "outputSize": null
+    },
+    {
+      "op": "decompress",
+      "workload": "text-20mb",
+      "contender": "zipjs-workers",
+      "label": "zip.js (workers)",
+      "medianMs": 68.77087500000016,
+      "outputSize": null
+    },
+    {
+      "op": "decompress",
+      "workload": "text-20mb",
+      "contender": "7z-mt",
+      "label": "7-Zip (multithread)",
+      "medianMs": 88.35383300000103,
+      "outputSize": null
+    },
+    {
+      "op": "compress",
+      "workload": "random-20mb",
+      "contender": "zipjs-1t",
+      "label": "zip.js (1 thread)",
+      "medianMs": 338.3117910000001,
+      "outputSize": 20978207
+    },
+    {
+      "op": "compress",
+      "workload": "random-20mb",
+      "contender": "zipjs-workers",
+      "label": "zip.js (workers)",
+      "medianMs": 342.029708,
+      "outputSize": 20978207
+    },
+    {
+      "op": "compress",
+      "workload": "random-20mb",
+      "contender": "7z-mt",
+      "label": "7-Zip (multithread)",
+      "medianMs": 409.97429100000045,
+      "outputSize": 20971684
+    },
+    {
+      "op": "compress",
+      "workload": "random-20mb",
+      "contender": "7z-fast",
+      "label": "7-Zip (fast -mx=1)",
+      "medianMs": 372.36708400000134,
+      "outputSize": 20971684
+    },
+    {
+      "op": "compress",
+      "workload": "many-files",
+      "contender": "zipjs-1t",
+      "label": "zip.js (1 thread)",
+      "medianMs": 1182.8415410000016,
+      "outputSize": 5514172
+    },
+    {
+      "op": "compress",
+      "workload": "many-files",
+      "contender": "zipjs-workers",
+      "label": "zip.js (workers)",
+      "medianMs": 779.9210420000018,
+      "outputSize": 5514172
+    },
+    {
+      "op": "compress",
+      "workload": "many-files",
+      "contender": "7z-1t",
+      "label": "7-Zip (1 thread)",
+      "medianMs": 560.960708999999,
+      "outputSize": 4866639
+    },
+    {
+      "op": "compress",
+      "workload": "many-files",
+      "contender": "7z-mt",
+      "label": "7-Zip (multithread)",
+      "medianMs": 198.87349999999788,
+      "outputSize": 4866639
+    },
+    {
+      "op": "compress",
+      "workload": "many-files",
+      "contender": "7z-fast",
+      "label": "7-Zip (fast -mx=1)",
+      "medianMs": 168.47879199999807,
+      "outputSize": 4998934
+    },
+    {
+      "op": "decompress",
+      "workload": "many-files",
+      "contender": "zipjs-1t",
+      "label": "zip.js (1 thread)",
+      "medianMs": 968.5588749999988,
+      "outputSize": null
+    },
+    {
+      "op": "decompress",
+      "workload": "many-files",
+      "contender": "zipjs-workers",
+      "label": "zip.js (workers)",
+      "medianMs": 976.4071250000015,
+      "outputSize": null
+    },
+    {
+      "op": "decompress",
+      "workload": "many-files",
+      "contender": "7z-1t",
+      "label": "7-Zip (1 thread)",
+      "medianMs": 492.7282919999998,
+      "outputSize": null
+    },
+    {
+      "op": "decompress",
+      "workload": "many-files",
+      "contender": "7z-mt",
+      "label": "7-Zip (multithread)",
+      "medianMs": 470.68529200000194,
+      "outputSize": null
+    },
+    {
+      "op": "compress",
+      "workload": "huge-256mb",
+      "contender": "zipjs-1t",
+      "label": "zip.js (1 thread)",
+      "medianMs": 5508.889000000003,
+      "outputSize": 79465300
+    },
+    {
+      "op": "compress",
+      "workload": "huge-256mb",
+      "contender": "zipjs-workers",
+      "label": "zip.js (workers)",
+      "medianMs": 5581.398084,
+      "outputSize": 79465300
+    },
+    {
+      "op": "compress",
+      "workload": "huge-256mb",
+      "contender": "7z-mt",
+      "label": "7-Zip (multithread)",
+      "medianMs": 33393.378666,
+      "outputSize": 73600682
+    },
+    {
+      "op": "compress",
+      "workload": "huge-256mb",
+      "contender": "7z-fast",
+      "label": "7-Zip (fast -mx=1)",
+      "medianMs": 5863.633084000001,
+      "outputSize": 86671683
+    }
+  ]
+}
