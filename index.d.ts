@@ -392,6 +392,10 @@ export interface Initializable {
    * Initializes the instance asynchronously
    */
   init?(): Promise<void>;
+  /**
+   * `true` if the instance is initialized.
+   */
+  initialized?: boolean;
 }
 
 /**
@@ -700,6 +704,22 @@ export class SplitDataWriter implements Initializable, WritableWriter {
    * The `WritableStream` instance.
    */
   writable: WritableStream;
+  /**
+   * The number of the disk being written.
+   */
+  diskNumber: number;
+  /**
+   * The byte offset of the disk being written.
+   */
+  diskOffset: number;
+  /**
+   * The maximum size of each disk in bytes.
+   */
+  maxSize: number;
+  /**
+   * The number of bytes still available on the disk being written.
+   */
+  availableSize: number;
   /**
    * Initializes the instance asynchronously
    */
@@ -1029,6 +1049,168 @@ export interface ZipReaderOptions {
 }
 
 /**
+ * Represents the parsed general purpose bit flag of an entry.
+ */
+export interface EntryBitFlag {
+  /**
+   * The compression option bits.
+   */
+  level: number;
+  /**
+   * `true` if the entry data is followed by a data descriptor.
+   */
+  dataDescriptor: boolean;
+  /**
+   * `true` if the filename and the comment are encoded in UTF-8 (EFS).
+   */
+  languageEncodingFlag: boolean;
+}
+/**
+ * Represents an extra field record of an entry.
+ */
+export interface EntryExtraField {
+  /**
+   * The type (header id) of the extra field.
+   */
+  type: number;
+  /**
+   * The data of the extra field.
+   */
+  data: Uint8Array;
+}
+/**
+ * Represents the AES extra field record of an entry.
+ */
+export interface EntryExtraFieldAES extends EntryExtraField {
+  /**
+   * The encryption strength (1, 2 or 3).
+   */
+  strength?: number;
+  /**
+   * The compression method stored in the AES extra field.
+   */
+  originalCompressionMethod?: number;
+}
+/**
+ * Represents a Unicode path or comment extra field record of an entry.
+ */
+export interface EntryExtraFieldUnicode extends EntryExtraField {
+  /**
+   * `true` if the extra field is consistent with the entry metadata.
+   */
+  valid?: boolean;
+}
+/**
+ * Represents the local file header fields of an entry, read when getting the entry data.
+ */
+export interface LocalDirectory {
+  /**
+   * The "Version" field.
+   */
+  version: number;
+  /**
+   * `true` if the entry is encrypted.
+   */
+  encrypted: boolean;
+  /**
+   * The general purpose bit flag (raw).
+   */
+  rawBitFlag: number;
+  /**
+   * The general purpose bit flag.
+   */
+  bitFlag: EntryBitFlag;
+  /**
+   * The last modification date (raw).
+   */
+  rawLastModDate: number;
+  /**
+   * The last modification date.
+   */
+  lastModDate: Date;
+  /**
+   * The length of the filename in bytes.
+   */
+  filenameLength: number;
+  /**
+   * The length of the extra field in bytes.
+   */
+  extraFieldLength: number;
+  /**
+   * The extra field (raw).
+   */
+  rawExtraField: Uint8Array;
+  /**
+   * The extra field.
+   */
+  extraField?: Map<number, EntryExtraField>;
+  /**
+   * The signature (CRC32 checksum) of the content.
+   */
+  signature?: number;
+  /**
+   * The compressed size of the content.
+   */
+  compressedSize?: number;
+  /**
+   * The uncompressed size of the content.
+   */
+  uncompressedSize?: number;
+  /**
+   * The compression method.
+   */
+  compressionMethod?: number;
+  /**
+   * The Zip64 extra field.
+   */
+  extraFieldZip64?: EntryExtraField;
+  /**
+   * The AES extra field.
+   */
+  extraFieldAES?: EntryExtraFieldAES;
+  /**
+   * The NTFS extra field.
+   */
+  extraFieldNTFS?: EntryExtraField;
+  /**
+   * The Unix extra field.
+   */
+  extraFieldUnix?: EntryExtraField;
+  /**
+   * The Info-ZIP Unix extra field.
+   */
+  extraFieldInfoZip?: EntryExtraField;
+  /**
+   * The extended timestamp extra field.
+   */
+  extraFieldExtendedTimestamp?: EntryExtraField;
+  /**
+   * The Unicode path extra field.
+   */
+  extraFieldUnicodePath?: EntryExtraFieldUnicode;
+  /**
+   * The Unicode comment extra field.
+   */
+  extraFieldUnicodeComment?: EntryExtraFieldUnicode;
+  /**
+   * The USDZ extra field.
+   */
+  extraFieldUSDZ?: EntryExtraField;
+}
+/**
+ * Represents an error raised while processing an entry, decorated with entry context.
+ */
+export interface EntryError extends Error {
+  /**
+   * `true` if the zip file is corrupted because the entry data could not be written entirely.
+   */
+  corruptedEntry?: boolean;
+  /**
+   * The id of the related {@link ZipEntry} (filesystem API).
+   */
+  entryId?: number;
+}
+/**
  * Represents the metadata of an entry in a zip file (Core API).
  */
 export interface EntryMetaData {
@@ -1225,6 +1407,62 @@ export interface EntryMetaData {
    * The compression method.
    */
   compressionMethod: number;
+  /**
+   * The general purpose bit flag (raw).
+   */
+  rawBitFlag?: number;
+  /**
+   * The general purpose bit flag.
+   */
+  bitFlag?: EntryBitFlag;
+  /**
+   * The length of the filename in bytes.
+   */
+  filenameLength?: number;
+  /**
+   * The length of the extra field in bytes.
+   */
+  extraFieldLength?: number;
+  /**
+   * The Zip64 extra field.
+   */
+  extraFieldZip64?: EntryExtraField;
+  /**
+   * The AES extra field.
+   */
+  extraFieldAES?: EntryExtraFieldAES;
+  /**
+   * The NTFS extra field.
+   */
+  extraFieldNTFS?: EntryExtraField;
+  /**
+   * The Unix extra field.
+   */
+  extraFieldUnix?: EntryExtraField;
+  /**
+   * The Info-ZIP Unix extra field.
+   */
+  extraFieldInfoZip?: EntryExtraField;
+  /**
+   * The extended timestamp extra field.
+   */
+  extraFieldExtendedTimestamp?: EntryExtraField;
+  /**
+   * The Unicode path extra field.
+   */
+  extraFieldUnicodePath?: EntryExtraFieldUnicode;
+  /**
+   * The Unicode comment extra field.
+   */
+  extraFieldUnicodeComment?: EntryExtraFieldUnicode;
+  /**
+   * The USDZ extra field.
+   */
+  extraFieldUSDZ?: EntryExtraField;
+  /**
+   * The local file header fields, set when the entry data has been read.
+   */
+  localDirectory?: LocalDirectory;
 }
 export interface DirectoryEntry extends EntryMetaData {
   /**
