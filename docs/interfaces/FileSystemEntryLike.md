@@ -6,7 +6,7 @@
 
 # Interface: FileSystemEntryLike
 
-Defined in: [index.d.ts:167](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L167)
+Defined in: [index.d.ts:167](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L167)
 
 Represents the `FileSystemEntry` class.
 

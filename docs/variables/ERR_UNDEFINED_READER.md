@@ -8,6 +8,6 @@
 
 > `const` **ERR\_UNDEFINED\_READER**: `string`
 
-Defined in: [index.d.ts:2568](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L2568)
+Defined in: [index.d.ts:2806](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L2806)
 
 Undefined reader error

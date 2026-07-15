@@ -6,7 +6,7 @@
 
 # Class: Reader\<Type\>
 
-Defined in: [index.d.ts:435](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L435)
+Defined in: [index.d.ts:439](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L439)
 
 Represents an instance used to read unknown type of data.
 
@@ -62,7 +62,7 @@ class BinaryStringReader extends Reader {
 
 > **new Reader**\<`Type`\>(`value`): `Reader`\<`Type`\>
 
-Defined in: [index.d.ts:441](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L441)
+Defined in: [index.d.ts:445](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L445)
 
 Creates the Reader instance
 
@@ -84,7 +84,7 @@ The data to read.
 
 > **readable**: `ReadableStream`
 
-Defined in: [index.d.ts:445](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L445)
+Defined in: [index.d.ts:449](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L449)
 
 The `ReadableStream` instance.
 
@@ -98,7 +98,7 @@ The `ReadableStream` instance.
 
 > **size**: `number`
 
-Defined in: [index.d.ts:449](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L449)
+Defined in: [index.d.ts:453](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L453)
 
 The total size of the data in bytes.
 
@@ -108,7 +108,7 @@ The total size of the data in bytes.
 
 > `optional` **init**(): `Promise`\<`void`\>
 
-Defined in: [index.d.ts:453](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L453)
+Defined in: [index.d.ts:457](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L457)
 
 Initializes the instance asynchronously
 
@@ -126,7 +126,7 @@ Initializes the instance asynchronously
 
 > **readUint8Array**(`index`, `length`): `Promise`\<`Uint8Array`\<`ArrayBufferLike`\>\>
 
-Defined in: [index.d.ts:461](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L461)
+Defined in: [index.d.ts:465](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L465)
 
 Reads a chunk of data
 

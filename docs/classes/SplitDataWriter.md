@@ -6,7 +6,7 @@
 
 # Class: SplitDataWriter
 
-Defined in: [index.d.ts:698](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L698)
+Defined in: [index.d.ts:702](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L702)
 
 Represents a [Writer](Writer.md)  instance used to retrieve the written data from a generator of [WritableWriter](../interfaces/WritableWriter.md)  instances  (i.e. split zip files).
 
@@ -21,7 +21,7 @@ Represents a [Writer](Writer.md)  instance used to retrieve the written data fro
 
 > **new SplitDataWriter**(`writerGenerator`, `maxSize?`): `SplitDataWriter`
 
-Defined in: [index.d.ts:713](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L713)
+Defined in: [index.d.ts:733](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L733)
 
 Creates the SplitDataWriter instance
 
@@ -45,11 +45,55 @@ The maximum size of the data written into [Writer](Writer.md) instances (default
 
 ## Properties
 
+### availableSize
+
+> **availableSize**: `number`
+
+Defined in: [index.d.ts:722](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L722)
+
+The number of bytes still available on the disk being written.
+
+***
+
+### diskNumber
+
+> **diskNumber**: `number`
+
+Defined in: [index.d.ts:710](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L710)
+
+The number of the disk being written.
+
+***
+
+### diskOffset
+
+> **diskOffset**: `number`
+
+Defined in: [index.d.ts:714](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L714)
+
+The byte offset of the disk being written.
+
+***
+
+### maxSize
+
+> **maxSize**: `number`
+
+Defined in: [index.d.ts:718](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L718)
+
+The maximum size of each disk in bytes.
+
+#### Implementation of
+
+[`WritableWriter`](../interfaces/WritableWriter.md).[`maxSize`](../interfaces/WritableWriter.md#maxsize)
+
+***
+
 ### writable
 
 > **writable**: `WritableStream`
 
-Defined in: [index.d.ts:702](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L702)
+Defined in: [index.d.ts:706](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L706)
 
 The `WritableStream` instance.
 
@@ -63,7 +107,7 @@ The `WritableStream` instance.
 
 > **init**(): `Promise`\<`void`\>
 
-Defined in: [index.d.ts:706](https://github.com/gildas-lormeau/zip.js/blob/035705c5459fc1f25930826ed97791164f0700af/index.d.ts#L706)
+Defined in: [index.d.ts:726](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L726)
 
 Initializes the instance asynchronously
 
