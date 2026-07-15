@@ -6,9 +6,9 @@ import { domprops } from "./node_modules/terser/tools/domprops.js";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 
-const WORKER_BOUNDARY_PROPERTY_NAMES = ["codecType", "config", "salt", "iterations", "keys", "password", "rawPassword", "encryptionStrength", "encrypted", "signed", "signature", "compressed", "level", "zipCrypto", "passwordVerification", "deflate64", "pull", "enqueue", "close", "messageId", "chunkSize", "useCompressionStream", "preventAbort", "preventClose", "checkPasswordOnly", "inputSize", "outputSize", "wasmURI", "malloc", "free", "inflate_new", "inflate_init_raw", "inflate_init_gzip", "inflate_init", "inflate_process", "inflate_last_consumed", "inflate_end", "inflate9_new", "inflate9_init_raw", "inflate9_process", "inflate9_last_consumed", "inflate9_end", "deflate_new", "deflate_init_raw", "deflate_init_gzip", "deflate_init", "deflate_process", "deflate_last_consumed", "deflate_end"];
+const WORKER_BOUNDARY_PROPERTY_NAMES = ["codecType", "config", "salt", "iterations", "keys", "password", "rawPassword", "encryptionStrength", "encrypted", "signed", "signature", "compressed", "level", "zipCrypto", "passwordVerification", "deflate64", "pull", "enqueue", "close", "messageId", "chunkSize", "useCompressionStream", "preventAbort", "preventClose", "checkPasswordOnly", "inputSize", "outputSize", "inBufferSize", "outBuffer", "wasmURI", "malloc", "free", "inflate_new", "inflate_init_raw", "inflate_init_gzip", "inflate_init", "inflate_process", "inflate_last_consumed", "inflate_end", "inflate9_new", "inflate9_init_raw", "inflate9_process", "inflate9_last_consumed", "inflate9_end", "deflate_new", "deflate_init_raw", "deflate_init_gzip", "deflate_init", "deflate_process", "deflate_last_consumed", "deflate_end"];
 
-const AUDITED_KEEP_PROPERTY_NAMES = [];
+const AUDITED_KEEP_PROPERTY_NAMES = ["bitFlag", "extraFieldAES", "extraFieldExtendedTimestamp", "extraFieldInfoZip", "extraFieldNTFS", "extraFieldUnicodeComment", "extraFieldUnicodePath", "extraFieldUnix", "extraFieldZip64", "initialized", "instance", "strength", "languageEncodingFlag", "corruptedEntry", "entryId", "diskNumber", "localDirectory", "filenameLength", "extraFieldLength", "commentLength", "extraFieldUSDZ"];
 
 export {
 	WORKER_BOUNDARY_PROPERTY_NAMES,
