@@ -8381,7 +8381,6 @@ const table = {
 		"x-doom": "wad",
 		"x-dvi": "dvi",
 		"x-httpd-eruby": "rhtml",
-		"x-font": "pcf.Z",
 		"x-freemind": "mm",
 		"x-gnumeric": "gnumeric",
 		"x-go-sgf": "sgf",
@@ -9068,7 +9067,7 @@ const table = {
 		"x-msbinder": "obd",
 		"x-mscardfile": "crd",
 		"x-msclip": "clp",
-		"application/x-ms-installer": "msi",
+		"x-ms-installer": "msi",
 		"x-msmediaview": [
 			"mvb",
 			"m13",
@@ -9431,7 +9430,10 @@ const table = {
 		],
 		"x-tga": "tga",
 		"cis-cod": "cod",
-		"avif": "avifs",
+		"avif": [
+			"avif",
+			"avifs"
+		],
 		"heic": [
 			"heif",
 			"heic"
@@ -9650,7 +9652,6 @@ const table = {
 		"vnd.wap.sl": "sl"
 	},
 	"video": {
-		"avif": "avif",
 		"3gpp": "3gp",
 		"annodex": "axv",
 		"dl": "dl",
