@@ -58,7 +58,7 @@
     "./dist/zip-module.wasm": "./dist/zip-module.wasm",
     ".": {
       "react-native": {
-        "types": "./index.d.ts",
+        "types": "./index.d.cts",
         "default": "./index-native.cjs"
       },
       "import": {
@@ -66,7 +66,7 @@
         "default": "./index.js"
       },
       "require": {
-        "types": "./index.d.ts",
+        "types": "./index.d.cts",
         "default": "./index.cjs"
       }
     },
@@ -76,16 +76,16 @@
         "default": "./index-native.js"
       },
       "require": {
-        "types": "./index.d.ts",
+        "types": "./index.d.cts",
         "default": "./index-native.cjs"
       }
     },
     "./index.cjs": {
-      "types": "./index.d.ts",
+      "types": "./index.d.cts",
       "default": "./index.cjs"
     },
     "./index-native.cjs": {
-      "types": "./index.d.ts",
+      "types": "./index.d.cts",
       "default": "./index-native.cjs"
     },
     "./index.min.js": {

@@ -34,6 +34,21 @@ function copyWasmModule() {
 	};
 }
 
+function copyCjsTypes() {
+	return {
+		name: "copy-cjs-types",
+		buildStart() {
+			const typesSrc = path.resolve(__dirname, "index.d.ts");
+			const typesDest = path.resolve(__dirname, "index.d.cts");
+			try {
+				fs.copyFileSync(typesSrc, typesDest);
+			} catch (e) {
+				this.warn && this.warn("copy-cjs-types: failed to copy declaration file: " + e.message);
+			}
+		}
+	};
+}
+
 const bundledTerserOptions = {
 	compress: {
 		unsafe: true,
@@ -125,6 +140,7 @@ export default [{
 	}],
 	plugins: [
 		copyWasmModule(),
+		copyCjsTypes(),
 		replace({
 			preventAssignment: true,
 			"__wasmBinary__": () => deflatePayload(fs.readFileSync("lib/core/streams/zlib-wasm/zlib-streams.wasm"))
