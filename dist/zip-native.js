@@ -2738,26 +2738,24 @@
 	class Reader extends Stream {
 
 		get readable() {
+			return this.createReadable();
+		}
+
+		createReadable({ offset = 0, size, diskNumberStart, chunkSize = DEFAULT_CHUNK_SIZE } = {}) {
 			const reader = this;
-			const { chunkSize = DEFAULT_CHUNK_SIZE } = reader;
-			const readable = new ReadableStream({
-				start() {
-					this.chunkOffset = 0;
-				},
+			let chunkOffset = 0;
+			return new ReadableStream({
 				async pull(controller) {
-					const { offset = 0, size, diskNumberStart } = readable;
-					const { chunkOffset } = this;
 					const dataSize = size === UNDEFINED_VALUE ? chunkSize : Math.min(chunkSize, size - chunkOffset);
 					const data = await readUint8Array(reader, offset + chunkOffset, dataSize, diskNumberStart);
 					controller.enqueue(data);
 					if ((chunkOffset + chunkSize > size) || (size === UNDEFINED_VALUE && !data.length && dataSize)) {
 						controller.close();
 					} else {
-						this.chunkOffset += chunkSize;
+						chunkOffset += chunkSize;
 					}
 				}
 			});
-			return readable;
 		}
 	}
 
@@ -3828,7 +3826,6 @@
 			if (reader.size < END_OF_CENTRAL_DIR_LENGTH) {
 				throw new Error(ERR_BAD_FORMAT);
 			}
-			reader.chunkSize = getChunkSize(config);
 			const strictness = getStrictness(getOptionValue$1(zipReader, options, OPTION_STRICTNESS), getOptionValue$1(zipReader, options, OPTION_CHECK_AMBIGUITY));
 			const checkAmbiguity = strictness == STRICTNESS_STRICT;
 			const rejectAmbiguousEndOfDirectory = strictness != STRICTNESS_TOLERANT;
@@ -4239,12 +4236,7 @@
 			}
 			const dataOffset = offset + HEADER_SIZE + filenameLength + extraFieldLength;
 			const size = compressedSize;
-			const readable = reader.readable;
-			Object.assign(readable, {
-				diskNumberStart,
-				offset: dataOffset,
-				size
-			});
+			const readable = reader.createReadable({ offset: dataOffset, size, diskNumberStart, chunkSize: getChunkSize(config) });
 			const signal = getOptionValue$1(zipEntry, options, OPTION_SIGNAL);
 			const checkPasswordOnly = getOptionValue$1(zipEntry, options, OPTION_CHECK_PASSWORD_ONLY);
 			let checkOverlappingEntry = getOptionValue$1(zipEntry, options, OPTION_CHECK_OVERLAPPING_ENTRY);
@@ -5758,8 +5750,7 @@
 		}
 		const { writable } = writer;
 		if (reader) {
-			reader.chunkSize = getChunkSize(config);
-			const readable = reader.readable;
+			const readable = reader.createReadable ? reader.createReadable({ chunkSize: getChunkSize(config) }) : reader.readable;
 			const size = reader.size;
 			const workerOptions = {
 				options: {
