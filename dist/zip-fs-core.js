@@ -112,6 +112,8 @@
 	const FUNCTION_TYPE = "function";
 	const OBJECT_TYPE = "object";
 
+	const EMPTY_UINT8_ARRAY = new Uint8Array();
+
 	/*
 	 Copyright (c) 2025 Gildas Lormeau. All rights reserved.
 
@@ -394,8 +396,6 @@
 				}
 			});
 			writer.blob = new Response(transformStream.readable, { headers }).blob();
-			// mark early rejections (e.g. aborted pipe) as handled; awaiting getData() still
-			// surfaces them
 			writer.blob.catch(() => { });
 		}
 
@@ -557,7 +557,7 @@
 				return eocdCache;
 			}
 			if (index >= size || length === 0) {
-				return new Uint8Array();
+				return EMPTY_UINT8_ARRAY;
 			} else {
 				if (index + length > size) {
 					length = size - index;
@@ -614,8 +614,6 @@
 	async function getRequestData(httpReader, sendRequest) {
 		const response = await sendRequest(HTTP_METHOD_GET, httpReader, getHeaders(httpReader));
 		httpReader.data = new Uint8Array(await response.arrayBuffer());
-		// the downloaded content is authoritative, e.g. the Content-Length response header
-		// of the HEAD request can be the encoded size when the content is compressed
 		httpReader.size = httpReader.data.length;
 	}
 
@@ -680,7 +678,6 @@
 			super();
 			Object.assign(this, {
 				url,
-				// an explicit fetch implementation takes precedence over useXHR
 				reader: options.useXHR && !options.fetch ? new XHRReader(url, options) : new FetchReader(url, options)
 			});
 		}
@@ -812,7 +809,7 @@
 					}
 				}
 			} else {
-				result = new Uint8Array();
+				result = EMPTY_UINT8_ARRAY;
 			}
 			reader.lastDiskNumber = Math.max(currentDiskNumber, reader.lastDiskNumber);
 			return result;
@@ -857,8 +854,6 @@
 						writer.diskOffset += diskSourceWriter.size;
 						writer.diskNumber++;
 						diskWriter = null;
-						// the next disk is not opened yet but its space is available; leaving a
-						// stale value here would force a new disk for every subsequent write
 						writer.availableSize = writer.maxSize;
 						if (chunk.length > availableSize) {
 							await this.write(chunk.subarray(availableSize));
@@ -1971,8 +1966,6 @@
 		if (GET_RANDOM_VALUES_SUPPORTED) {
 			return crypto.getRandomValues(array);
 		} else {
-			// all supported runtimes expose crypto.getRandomValues; failing hard beats
-			// silently generating predictable encryption salts
 			throw new Error(ERR_UNSUPPORTED_CRYPTO_API);
 		}
 	}
@@ -2035,12 +2028,7 @@
 		constructor({ password, rawPassword, encryptionStrength, checkPasswordOnly }) {
 			super({
 				start() {
-					Object.assign(this, {
-						ready: new Promise(resolve => this.resolveReady = resolve),
-						password: encodePassword(password, rawPassword),
-						strength: encryptionStrength - 1,
-						pending: new Uint8Array()
-					});
+					initAesCrypto(this, password, rawPassword, encryptionStrength);
 				},
 				async transform(chunk, controller) {
 					const aesCrypto = this;
@@ -2075,7 +2063,7 @@
 						await ready;
 						const chunkToDecrypt = subarray(pending, 0, pending.length - SIGNATURE_LENGTH);
 						const originalSignature = subarray(pending, pending.length - SIGNATURE_LENGTH);
-						let decryptedChunkArray = new Uint8Array();
+						let decryptedChunkArray = EMPTY_UINT8_ARRAY;
 						if (chunkToDecrypt.length) {
 							const encryptedChunk = toBits(codecBytes, chunkToDecrypt);
 							hmac.update(encryptedChunk);
@@ -2083,8 +2071,6 @@
 							decryptedChunkArray = fromBits(codecBytes, decryptedChunk);
 						}
 						const signature = subarray(fromBits(codecBytes, hmac.digest()), 0, SIGNATURE_LENGTH);
-						// branch-free comparison: accumulate the differences instead of
-						// short-circuiting on the first mismatching byte
 						let invalidSignature = pending.length < SIGNATURE_LENGTH ? 1 : 0;
 						for (let indexSignature = 0; indexSignature < SIGNATURE_LENGTH; indexSignature++) {
 							invalidSignature |= signature[indexSignature] ^ originalSignature[indexSignature];
@@ -2106,12 +2092,7 @@
 			let stream;
 			super({
 				start() {
-					Object.assign(this, {
-						ready: new Promise(resolve => this.resolveReady = resolve),
-						password: encodePassword(password, rawPassword),
-						strength: encryptionStrength - 1,
-						pending: new Uint8Array()
-					});
+					initAesCrypto(this, password, rawPassword, encryptionStrength);
 				},
 				async transform(chunk, controller) {
 					const aesCrypto = this;
@@ -2121,7 +2102,7 @@
 						resolveReady,
 						ready
 					} = aesCrypto;
-					let preamble = new Uint8Array();
+					let preamble = EMPTY_UINT8_ARRAY;
 					if (password) {
 						preamble = await createEncryptionKeys(aesCrypto, strength, password);
 						resolveReady();
@@ -2141,7 +2122,7 @@
 					} = this;
 					if (hmac && ctr) {
 						await ready;
-						let encryptedChunkArray = new Uint8Array();
+						let encryptedChunkArray = EMPTY_UINT8_ARRAY;
 						if (pending.length) {
 							const encryptedChunk = ctr.update(toBits(codecBytes, pending));
 							hmac.update(encryptedChunk);
@@ -2154,6 +2135,15 @@
 			});
 			stream = this;
 		}
+	}
+
+	function initAesCrypto(aesCrypto, password, rawPassword, encryptionStrength) {
+		Object.assign(aesCrypto, {
+			ready: new Promise(resolve => aesCrypto.resolveReady = resolve),
+			password: encodePassword(password, rawPassword),
+			strength: encryptionStrength - 1,
+			pending: EMPTY_UINT8_ARRAY
+		});
 	}
 
 	function append(aesCrypto, input, output, paddingStart, paddingEnd, verifySignature) {
@@ -2317,20 +2307,13 @@
 		constructor({ password, rawPassword, passwordVerification, checkPasswordOnly }) {
 			super({
 				start() {
-					Object.assign(this, {
-						password,
-						rawPassword,
-						passwordVerification
-					});
-					createKeys(this, password, rawPassword);
+					initZipCrypto(this, password, rawPassword, passwordVerification);
 				},
 				transform(chunk, controller) {
 					const zipCrypto = this;
 					if (zipCrypto.password || zipCrypto.rawPassword) {
 						const decryptedHeader = decrypt(zipCrypto, chunk.subarray(0, HEADER_LENGTH));
 						zipCrypto.password = zipCrypto.rawPassword = null;
-						// verify the password with a branch-free comparison of the verification byte, mirroring
-						// the constant-time AES HMAC signature check
 						if ((decryptedHeader.at(-1) ^ zipCrypto.passwordVerification) != 0) {
 							throw new Error(ERR_INVALID_PASSWORD);
 						}
@@ -2351,12 +2334,7 @@
 		constructor({ password, rawPassword, passwordVerification }) {
 			super({
 				start() {
-					Object.assign(this, {
-						password,
-						rawPassword,
-						passwordVerification
-					});
-					createKeys(this, password, rawPassword);
+					initZipCrypto(this, password, rawPassword, passwordVerification);
 				},
 				transform(chunk, controller) {
 					const zipCrypto = this;
@@ -2378,6 +2356,15 @@
 				}
 			});
 		}
+	}
+
+	function initZipCrypto(zipCrypto, password, rawPassword, passwordVerification) {
+		Object.assign(zipCrypto, {
+			password,
+			rawPassword,
+			passwordVerification
+		});
+		createKeys(zipCrypto, password, rawPassword);
 	}
 
 	function decrypt(target, input) {
@@ -2484,14 +2471,6 @@
 			const stream = this;
 			let crc32Stream, encryptionStream, gzipCrc32Stream;
 			let readable = super.readable;
-			// The gzip trailer carries a CRC-32 of the uncompressed data (same polynomial as zip),
-			// computed in native code for free during compression. On the native CompressionStream,
-			// harvest it instead of running a separate CRC pass: compress as gzip, then strip the
-			// fixed 10-byte header and 8-byte trailer to recover the exact raw-deflate payload
-			// (byte-identical to a deflate-raw compression) while capturing the CRC. The CRC becomes
-			// available at end-of-stream, exactly like Crc32Stream, so nothing downstream (data
-			// descriptor, central directory, ZipCrypto) needs it any earlier. Not applied for the
-			// pure-JS/WASM ports (a separate slice-by-8 CRC pass is as fast or faster there).
 			const useGzipCrc32 = signed && compressed && !deflate64 && (!encrypted || zipCrypto) &&
 				Boolean(useCompressionStream && CompressionStream);
 			if ((!encrypted || zipCrypto) && signed && !useGzipCrc32) {
@@ -2528,12 +2507,6 @@
 		}
 	}
 
-	// Converts a gzip stream into its raw-deflate payload while capturing the CRC-32 from the gzip
-	// trailer. The CompressionStream gzip header is always the fixed 10-byte form (FLG=0, no optional
-	// fields) per the Compression Streams spec, so it is stripped by length; the trailer is the last
-	// 8 bytes (CRC-32 LE, then ISIZE LE). Bounded memory: at most GZIP_TRAILER_LENGTH bytes are held
-	// back across chunks. The signature is read big-endian-agnostically as a number, matching the
-	// value Crc32Stream produces, so the writer path is unchanged.
 	class GzipToRawDeflateStream extends TransformStream {
 
 		constructor() {
@@ -2559,10 +2532,6 @@
 						tail = pending;
 						return;
 					}
-					// Emit everything except the trailing GZIP_TRAILER_LENGTH bytes as a standalone,
-					// right-sized Uint8Array. Consumers may read chunk.buffer directly (e.g. custom
-					// writers), so an aliased subarray of a larger buffer would leak the held-back
-					// trailer bytes. Bytes are copied exactly once, into `output` or `tail`.
 					const emitLength = available - GZIP_TRAILER_LENGTH;
 					const output = new Uint8Array(emitLength);
 					const fromTail = Math.min(emitLength, tail.length);
@@ -2651,11 +2620,6 @@
 				throw error;
 			}
 		}
-		// The native CompressionStream/DecompressionStream and the pure-JS zlib port do not signal
-		// backpressure on their writable side (their `ready` never pends), so a plain pipeThrough drains
-		// the whole source into them and peak memory grows with the entry size. Awaiting each write()
-		// paces the source to the codec's consumption rate, keeping streaming memory bounded. The WASM
-		// codec already backpressures, so this is a no-op cost for it.
 		return pipeThroughBackpressured(readable, codecStream);
 	}
 
@@ -2663,10 +2627,6 @@
 		return readable.pipeThrough(transformStream);
 	}
 
-	// Like readable.pipeThrough(transformStream), but drives the writable side manually and awaits each
-	// write() so that a codec which under-reports backpressure cannot pull the whole source into memory.
-	// Errors propagate in both directions: a source error aborts the codec; a downstream cancel/error
-	// (surfaced through the codec's writable rejecting) cancels the source.
 	function pipeThroughBackpressured(readable, transformStream) {
 		const writer = transformStream.writable.getWriter();
 		const reader = readable.getReader();
@@ -2695,7 +2655,7 @@
 		try {
 			await writer.abort(error);
 		} catch {
-			// the writable may already be errored/closed
+			// ignored: the writable may already be errored/closed
 		}
 	}
 
@@ -2703,13 +2663,10 @@
 		try {
 			await reader.cancel(error);
 		} catch {
-			// the readable may already be errored/closed
+			// ignored: the readable may already be errored/closed
 		}
 	}
 
-	// DecompressionStream implementations can fail with a message-less TypeError on malformed
-	// input; give these errors an identifiable message (errors raised by the other stages of
-	// the pipeline, e.g. ERR_INVALID_PASSWORD, always carry a message and pass through as-is)
 	function mapInflateStreamError(readable) {
 		const reader = readable.getReader();
 		return new ReadableStream({
@@ -3034,9 +2991,6 @@
 				try {
 					await initModule(config);
 				} catch {
-					// The WASM module failed to load. Fall back to the native CompressionStream only if the
-					// zlib codec that would otherwise run depends on that module; a self-contained codec
-					// supplied through config (e.g. the pure-JS port) stays usable and is kept as requested.
 					const ZlibStream = options.codecType.startsWith(CODEC_DEFLATE) ?
 						config.CompressionStreamZlib :
 						config.DecompressionStreamZlib;
@@ -3114,7 +3068,6 @@
 			return resultValue;
 		} catch (error) {
 			await closeWritable();
-			// unblock the pipe watcher if the worker died before closing its end of the stream
 			abortPipe();
 			try {
 				await closed;
@@ -3139,8 +3092,6 @@
 		const abortController = new AbortController();
 		const { writable, readable } = new TransformStream();
 		const closed = readable.pipeTo(writableSource, { preventClose: true, preventAbort: true, signal: abortController.signal });
-		// the pipe can fail before `closed` is awaited (e.g. the destination write fails);
-		// mark the rejection as handled so it cannot kill the process in the meantime
 		closed.catch(() => { });
 		return { writable, closed, abortPipe: () => abortController.abort() };
 	}
@@ -3233,8 +3184,6 @@
 			event.preventDefault();
 		}
 		const { rejectResult, writer, onTaskFinished } = workerData;
-		// the worker is unusable (e.g. its script failed to load); terminate it and
-		// fail the current task instead of letting it hang forever
 		terminateWorker$1(workerData);
 		if (rejectResult) {
 			rejectResult(event.error || new Error(event.message || ERROR_EVENT_TYPE));
@@ -3286,8 +3235,6 @@
 	async function onMessage({ data }, workerData) {
 		const { type, value, messageId, result, error } = data;
 		const { reader, writer, resolveResult, rejectResult, onTaskFinished, generation } = workerData;
-		// continuations below can settle after the worker slot has been reassigned to a new
-		// task (e.g. a pending pull read failing late); they must not touch the new task
 		const stale = () => workerData.generation != generation;
 		try {
 			if (error) {
@@ -3551,7 +3498,6 @@
 		if (encoding && encoding.trim().toLowerCase() == "cp437") {
 			return decodeCP437(value);
 		} else {
-			// ignoreBOM keeps a leading U+FEFF in filenames/comments instead of dropping it
 			return new TextDecoder(encoding, { ignoreBOM: true }).decode(value);
 		}
 	}
@@ -3799,8 +3745,6 @@
 	const CHARSET_UTF8 = "utf-8";
 	const PROPERTY_NAME_UTF8_SUFFIX = "UTF8";
 	const CHARSET_CP437 = "cp437";
-	// bits of the general purpose flag that change how an entry is interpreted; the level bits (1-2) are excluded
-	// because they are informative only
 	const BITFLAG_AMBIGUITY_MASK = BITFLAG_ENCRYPTED | BITFLAG_DATA_DESCRIPTOR | BITFLAG_LANG_ENCODING_FLAG;
 	const ZIP64_PROPERTIES = [
 		[PROPERTY_NAME_UNCOMPRESSED_SIZE, MAX_32_BITS],
@@ -3857,8 +3801,6 @@
 					throw new Error(ERR_EOCDR_NOT_FOUND);
 				}
 			}
-			// two or more end-anchored records that each dereference to a valid central directory cannot be told
-			// apart (see comment_length ⟺ EOF): the archive is genuinely ambiguous, so refuse rather than guess
 			if (rejectAmbiguousEndOfDirectory && endOfDirectoryReachingEndCount > 1) {
 				throwAmbiguousArchive("multiple end of central directory records");
 			}
@@ -3881,7 +3823,7 @@
 			if (directoryDataOffset == MAX_32_BITS || directoryDataLength == MAX_32_BITS || filesLength == MAX_16_BITS || diskNumber == MAX_16_BITS) {
 				const endOfDirectoryLocatorArray = endOfDirectoryInfo.offset >= ZIP64_END_OF_CENTRAL_DIR_LOCATOR_LENGTH ?
 					await readUint8Array(reader, endOfDirectoryInfo.offset - ZIP64_END_OF_CENTRAL_DIR_LOCATOR_LENGTH, ZIP64_END_OF_CENTRAL_DIR_LOCATOR_LENGTH) :
-					new Uint8Array();
+					EMPTY_UINT8_ARRAY;
 				const endOfDirectoryLocatorView = getDataView$1(endOfDirectoryLocatorArray);
 				if (endOfDirectoryLocatorArray.length == ZIP64_END_OF_CENTRAL_DIR_LOCATOR_LENGTH &&
 					getUint32(endOfDirectoryLocatorView, 0) == ZIP64_END_OF_CENTRAL_DIR_LOCATOR_SIGNATURE) {
@@ -3948,12 +3890,6 @@
 				}
 				const expectedDirectoryDataOffset = centralDirectoryEndOffset - directoryDataLength - (reader.lastDiskOffset || 0);
 				if (directoryDataOffset != expectedDirectoryDataOffset && diskNumber == lastDiskNumber) {
-					// the reconciled offset (the directory ends exactly where the canonical record begins) is anchored
-					// to the unforgeable end of the archive; the stored offset is not. Prefer the reconciled offset
-					// unless the stored one points at a directory and the reconciled one does not — that exception
-					// keeps a corrupt declared directory length from sending the read astray, while still moving off a
-					// stored offset that only looks valid because an append remnant left the previous (identically
-					// laid out) directory sitting there.
 					const storedPointsAtDirectory = getUint32(directoryView, offset) == CENTRAL_FILE_HEADER_SIGNATURE;
 					let reconcile = !storedPointsAtDirectory;
 					if (!reconcile && expectedDirectoryDataOffset >= 0 && expectedDirectoryDataOffset + 4 <= reader.size) {
@@ -4110,11 +4046,11 @@
 			const extractPrependedData = getOptionValue$1(zipReader, options, OPTION_EXTRACT_PREPENDED_DATA);
 			const extractAppendedData = getOptionValue$1(zipReader, options, OPTION_EXTRACT_APPENDED_DATA);
 			if (extractPrependedData) {
-				zipReader.prependedData = startOffset > 0 ? await readUint8Array(reader, 0, startOffset) : new Uint8Array();
+				zipReader.prependedData = startOffset > 0 ? await readUint8Array(reader, 0, startOffset) : EMPTY_UINT8_ARRAY;
 			}
-			zipReader.comment = commentLength ? await readUint8Array(reader, commentOffset + END_OF_CENTRAL_DIR_LENGTH, commentLength) : new Uint8Array();
+			zipReader.comment = commentLength ? await readUint8Array(reader, commentOffset + END_OF_CENTRAL_DIR_LENGTH, commentLength) : EMPTY_UINT8_ARRAY;
 			if (extractAppendedData) {
-				zipReader.appendedData = appendedDataOffset < reader.size ? await readUint8Array(reader, appendedDataOffset, reader.size - appendedDataOffset) : new Uint8Array();
+				zipReader.appendedData = appendedDataOffset < reader.size ? await readUint8Array(reader, appendedDataOffset, reader.size - appendedDataOffset) : EMPTY_UINT8_ARRAY;
 			}
 			return true;
 		}
@@ -4186,7 +4122,7 @@
 				filenameLength
 			} = localDirectory;
 			const checkAmbiguity = getStrictness(getOptionValue$1(zipEntry, options, OPTION_STRICTNESS), getOptionValue$1(zipEntry, options, OPTION_CHECK_AMBIGUITY)) == STRICTNESS_STRICT;
-			let rawLocalFilename = new Uint8Array();
+			let rawLocalFilename = EMPTY_UINT8_ARRAY;
 			if (checkAmbiguity && (filenameLength || extraFieldLength)) {
 				const trailingDataArray = await readUint8Array(reader, offset + HEADER_SIZE, filenameLength + extraFieldLength, diskNumberStart);
 				rawLocalFilename = trailingDataArray.subarray(0, filenameLength);
@@ -4194,7 +4130,7 @@
 			} else {
 				localDirectory.rawExtraField = extraFieldLength ?
 					await readUint8Array(reader, offset + HEADER_SIZE + filenameLength, extraFieldLength, diskNumberStart) :
-					new Uint8Array();
+					EMPTY_UINT8_ARRAY;
 			}
 			readCommonFooter(zipEntry, localDirectory, dataView, 4, true);
 			if (checkAmbiguity) {
@@ -4497,7 +4433,6 @@
 			const view = getDataView$1(new Uint8Array(extraField.data));
 			let uid, gid;
 			if (isInfoZip) {
-				// Info-ZIP New Unix "ux" field (0x7875): version + variable-length uid/gid
 				let offset = 0;
 				const version = getUint8(view, offset++);
 				const uidSize = getUint8(view, offset++);
@@ -4507,8 +4442,6 @@
 				gid = unpackUnixId(extraField.data.subarray(offset, offset + gidSize));
 				Object.assign(extraField, { version, uid, gid });
 			} else if (extraField.data.length >= 4) {
-				// Info-ZIP Unix "Ux" field (0x7855): fixed 2-byte uid + gid (the file mode, if any, is
-				// carried in the external file attributes, not here)
 				uid = getUint16(view, 0);
 				gid = getUint16(view, 2);
 				Object.assign(extraField, { uid, gid });
@@ -4560,7 +4493,6 @@
 		timeProperties.forEach((propertyName, indexProperty) => {
 			if (extraFieldExtendedTimestamp.data.length >= offset + 4) {
 				const time = getUint32(extraFieldView, offset);
-				// the extended timestamp is a signed 32-bit time_t value
 				directory[propertyName] = extraFieldExtendedTimestamp[propertyName] = new Date((time | 0) * 1000);
 				const rawPropertyName = timeRawProperties[indexProperty];
 				extraFieldExtendedTimestamp[rawPropertyName] = time;
@@ -4637,7 +4569,6 @@
 
 	function getStrictness(strictness, checkAmbiguity) {
 		if (strictness === UNDEFINED_VALUE) {
-			// `checkAmbiguity: true` is kept as a backward-compatible alias for the strictest mode
 			return checkAmbiguity ? STRICTNESS_STRICT : STRICTNESS_BALANCED;
 		}
 		return strictness;
@@ -4648,81 +4579,45 @@
 			return maxAppendedDataSize;
 		}
 		if (strictness == STRICTNESS_STRICT) {
-			// the comment must reach the end of the file: no trailing data tolerated
 			return 0;
 		}
 		if (strictness == STRICTNESS_TOLERANT) {
 			return Infinity;
 		}
-		// balanced: tolerate up to a legal comment's worth of trailing data (a 16-bit length); beyond that the
-		// trailing bytes cannot hide inside a comment, so they are treated as a second thing bolted onto the file
 		return MAX_16_BITS;
 	}
 
-	// cap on how many out-of-window central directory probes the scan below may issue. A legitimate archive needs
-	// at most a couple (the canonical record, plus one more to detect genuine ambiguity); every other reachability
-	// check is served from the tail window already in memory. The cap keeps an archive whose comment is stuffed
-	// with unreachable end-anchored records from forcing an unbounded number of (potentially remote) reads.
 	const MAX_END_OF_CENTRAL_DIR_PROBES = 64;
 
-	// reachability rankings for an end-anchored candidate record (see getCentralDirectoryReachability)
 	const CENTRAL_DIRECTORY_UNREACHABLE = 0;
 	const CENTRAL_DIRECTORY_PLAUSIBLE = 1;
 	const CENTRAL_DIRECTORY_REACHABLE = 2;
 
-	// Locates the authoritative end of central directory record. The canonical record is the last one whose
-	// declared comment reaches exactly the end of the file ("end-anchored") and that points to a central directory
-	// ("reachable"); earlier signatures (stale append remnants, bytes embedded in a comment) are ignored. When two
-	// or more end-anchored records point to a central directory the archive is ambiguous, and the count is returned
-	// so the caller can refuse it. A record that reaches the end of the file but points to no central directory (an
-	// empty archive) is only "plausible": it cannot be corroborated, so it never counts towards ambiguity and is
-	// chosen only when no reachable record exists — otherwise an empty record forged in a comment could outrank the
-	// genuine directory. When no record is end-anchored (appended data or an oversized comment), falls back to the
-	// last record within the tolerated window that points to a directory (see seekEndOfCentralDirectory).
 	async function findEndOfCentralDirectory(reader, rejectAmbiguous, maxAppendedDataSize) {
 		const { size } = reader;
-		// an end-anchored record can only live within the last END_OF_CENTRAL_DIR_LENGTH + MAX_16_BITS bytes,
-		// since the comment length that ties it to the end of the file is a 16-bit field
 		const anchoredLength = Math.min(size, END_OF_CENTRAL_DIR_LENGTH + MAX_16_BITS);
-		const anchoredOffset = size - anchoredLength;
-		const anchoredArray = await readUint8Array(reader, anchoredOffset, anchoredLength);
-		const anchoredView = getDataView$1(anchoredArray);
 		const remoteProbeBudget = { count: MAX_END_OF_CENTRAL_DIR_PROBES };
 		let endOfDirectoryInfo;
 		let plausibleEndOfDirectoryInfo;
 		let endOfDirectoryReachingEndCount = 0;
-		for (let indexByte = anchoredArray.length - END_OF_CENTRAL_DIR_LENGTH; indexByte >= 0; indexByte--) {
-			if (getUint32(anchoredView, indexByte) == END_OF_CENTRAL_DIR_SIGNATURE) {
-				const offset = anchoredOffset + indexByte;
-				const commentLength = getUint16(anchoredView, indexByte + 20);
-				// end-anchored: the declared comment extends exactly to the end of the file. The comment length is
-				// attacker-controlled, but the reconciliation against the (unforgeable) end of file is not.
-				if (offset + END_OF_CENTRAL_DIR_LENGTH + commentLength == size) {
-					const reachability = await getCentralDirectoryReachability(reader, anchoredView, anchoredOffset, indexByte, offset, size, remoteProbeBudget);
-					if (reachability == CENTRAL_DIRECTORY_REACHABLE) {
-						if (!endOfDirectoryInfo) {
-							endOfDirectoryInfo = {
-								offset,
-								buffer: anchoredArray.slice(indexByte, indexByte + END_OF_CENTRAL_DIR_LENGTH).buffer
-							};
-						}
-						endOfDirectoryReachingEndCount++;
-						// the canonical record (highest offset) is found first; a second one is enough to flag ambiguity
-						if (!rejectAmbiguous || endOfDirectoryReachingEndCount > 1) {
-							break;
-						}
-					} else if (reachability == CENTRAL_DIRECTORY_PLAUSIBLE && !plausibleEndOfDirectoryInfo) {
-						plausibleEndOfDirectoryInfo = {
-							offset,
-							buffer: anchoredArray.slice(indexByte, indexByte + END_OF_CENTRAL_DIR_LENGTH).buffer
-						};
+		for await (const [anchoredView, anchoredOffset, anchoredArray, indexByte, offset] of scanEndOfCentralDirectory(reader, anchoredLength)) {
+			const commentLength = getUint16(anchoredView, indexByte + 20);
+			if (offset + END_OF_CENTRAL_DIR_LENGTH + commentLength == size) {
+				const reachability = await getCentralDirectoryReachability(reader, anchoredView, anchoredOffset, indexByte, offset, size, remoteProbeBudget);
+				if (reachability == CENTRAL_DIRECTORY_REACHABLE) {
+					if (!endOfDirectoryInfo) {
+						endOfDirectoryInfo = getEndOfCentralDirectoryInfo(anchoredArray, indexByte, offset);
 					}
+					endOfDirectoryReachingEndCount++;
+					if (!rejectAmbiguous || endOfDirectoryReachingEndCount > 1) {
+						break;
+					}
+				} else if (reachability == CENTRAL_DIRECTORY_PLAUSIBLE && !plausibleEndOfDirectoryInfo) {
+					plausibleEndOfDirectoryInfo = getEndOfCentralDirectoryInfo(anchoredArray, indexByte, offset);
 				}
 			}
 		}
 		if (!endOfDirectoryInfo) {
-			// no record points to a directory: prefer a plausible (empty) end-anchored record before scanning the
-			// tolerated window for a bare signature
 			endOfDirectoryInfo = plausibleEndOfDirectoryInfo;
 		}
 		if (!endOfDirectoryInfo) {
@@ -4731,69 +4626,53 @@
 		return { endOfDirectoryInfo, endOfDirectoryReachingEndCount };
 	}
 
-	// Fallback for findEndOfCentralDirectory when no record is end-anchored: appended data or an oversized comment
-	// pushed the record's declared comment past the end of the file, so its position can no longer be reconciled
-	// against the end of the file. Scans the tolerated window from the end and returns the first record that points
-	// to a central directory, so a stray signature embedded in appended data cannot hijack discovery (which the
-	// anchored scan already prevents for anchored records). Falls back to the first plausible (empty) record, then
-	// to the last bare signature, so a degenerate archive still opens as before. The window ends at the file, so the
-	// same in-window / metered reads as the anchored scan apply.
 	async function seekEndOfCentralDirectory(reader, maxAppendedDataSize, remoteProbeBudget) {
 		const { size } = reader;
 		const searchLength = Math.min(size, maxAppendedDataSize == Infinity ? size :
 			END_OF_CENTRAL_DIR_LENGTH + MAX_16_BITS + maxAppendedDataSize);
-		const searchOffset = size - searchLength;
-		const searchArray = await readUint8Array(reader, searchOffset, searchLength);
-		const searchView = getDataView$1(searchArray);
 		let firstSignatureInfo, plausibleInfo;
-		for (let indexByte = searchArray.length - END_OF_CENTRAL_DIR_LENGTH; indexByte >= 0; indexByte--) {
-			if (getUint32(searchView, indexByte) == END_OF_CENTRAL_DIR_SIGNATURE) {
-				const offset = searchOffset + indexByte;
-				const record = { offset, buffer: searchArray.slice(indexByte, indexByte + END_OF_CENTRAL_DIR_LENGTH).buffer };
-				if (!firstSignatureInfo) {
-					firstSignatureInfo = record;
-				}
-				const reachability = await getCentralDirectoryReachability(reader, searchView, searchOffset, indexByte, offset, size, remoteProbeBudget);
-				if (reachability == CENTRAL_DIRECTORY_REACHABLE) {
-					return record;
-				}
-				if (reachability == CENTRAL_DIRECTORY_PLAUSIBLE && !plausibleInfo) {
-					plausibleInfo = record;
-				}
+		for await (const [searchView, searchOffset, searchArray, indexByte, offset] of scanEndOfCentralDirectory(reader, searchLength)) {
+			const record = getEndOfCentralDirectoryInfo(searchArray, indexByte, offset);
+			if (!firstSignatureInfo) {
+				firstSignatureInfo = record;
+			}
+			const reachability = await getCentralDirectoryReachability(reader, searchView, searchOffset, indexByte, offset, size, remoteProbeBudget);
+			if (reachability == CENTRAL_DIRECTORY_REACHABLE) {
+				return record;
+			}
+			if (reachability == CENTRAL_DIRECTORY_PLAUSIBLE && !plausibleInfo) {
+				plausibleInfo = record;
 			}
 		}
 		return plausibleInfo || firstSignatureInfo;
 	}
 
-	// Ranks how strongly an end-anchored candidate record is backed by an actual central directory, used to decide
-	// which record is canonical and which count towards ambiguity. It is intentionally conservative and does not
-	// fully parse the directory (the caller does that for the canonical record):
-	//   - REACHABLE: the record dereferences a central directory (a central file header signature at the
-	//     reconciled offset), or, for a zip64 record, the zip64 locator that a genuine zip64 archive places
-	//     immediately before it. Only these count towards ambiguity.
-	//   - PLAUSIBLE: the record describes an empty archive, which has no central directory to dereference. Its
-	//     fields are indistinguishable from an empty end of central directory record forged inside a comment, so it
-	//     is accepted only as a last resort and never inflates the ambiguity count.
-	//   - UNREACHABLE: neither — stale append remnant or signature bytes embedded in a comment.
-	// Signatures are read from the tail window (`view`, spanning `[anchoredOffset, size)`) when they fall inside it;
-	// only a target below the window costs a (possibly remote) read, metered by `remoteProbeBudget` so a stuffed
-	// comment cannot amplify into an unbounded number of requests.
+	async function* scanEndOfCentralDirectory(reader, scanLength) {
+		const scanOffset = reader.size - scanLength;
+		const scanArray = await readUint8Array(reader, scanOffset, scanLength);
+		const scanView = getDataView$1(scanArray);
+		for (let indexByte = scanArray.length - END_OF_CENTRAL_DIR_LENGTH; indexByte >= 0; indexByte--) {
+			if (getUint32(scanView, indexByte) == END_OF_CENTRAL_DIR_SIGNATURE) {
+				yield [scanView, scanOffset, scanArray, indexByte, scanOffset + indexByte];
+			}
+		}
+	}
+
+	function getEndOfCentralDirectoryInfo(scanArray, indexByte, offset) {
+		return { offset, buffer: scanArray.slice(indexByte, indexByte + END_OF_CENTRAL_DIR_LENGTH).buffer };
+	}
+
 	async function getCentralDirectoryReachability(reader, view, anchoredOffset, indexByte, offset, size, remoteProbeBudget) {
 		const filesLength = getUint16(view, indexByte + 10);
 		const directoryDataLength = getUint32(view, indexByte + 12);
 		const directoryDataOffset = getUint32(view, indexByte + 16);
 		if (filesLength == MAX_16_BITS || directoryDataLength == MAX_32_BITS || directoryDataOffset == MAX_32_BITS) {
-			// saturated fields imply a zip64 record; corroborate it with the zip64 end of central directory locator
-			// that sits immediately before it, so saturated bytes inside a comment cannot masquerade as one
 			const locatorSignature = await readSignature(reader, view, anchoredOffset, offset - ZIP64_END_OF_CENTRAL_DIR_LOCATOR_LENGTH, size, remoteProbeBudget);
 			return locatorSignature == ZIP64_END_OF_CENTRAL_DIR_LOCATOR_SIGNATURE ? CENTRAL_DIRECTORY_REACHABLE : CENTRAL_DIRECTORY_UNREACHABLE;
 		}
 		if (!filesLength && !directoryDataLength) {
-			// a valid empty archive has no central directory to dereference
 			return CENTRAL_DIRECTORY_PLAUSIBLE;
 		}
-		// the central directory ends where this record starts; reconcile the stored offset against that actual
-		// position (see stored_cd_offset ⟺ eocd_pos − cd_size) so prepended data does not hide the directory
 		for (const centralDirectoryOffset of [offset - directoryDataLength, directoryDataOffset]) {
 			if (await readSignature(reader, view, anchoredOffset, centralDirectoryOffset, size, remoteProbeBudget) == CENTRAL_FILE_HEADER_SIGNATURE) {
 				return CENTRAL_DIRECTORY_REACHABLE;
@@ -4802,15 +4681,11 @@
 		return CENTRAL_DIRECTORY_UNREACHABLE;
 	}
 
-	// Reads a 4-byte little-endian signature at `signatureOffset`, served from the tail window (`view`, spanning
-	// `[anchoredOffset, size)`) when it falls inside it and otherwise from a metered (possibly remote) read. Returns
-	// UNDEFINED_VALUE when the position is out of range or the out-of-window read budget is exhausted.
 	async function readSignature(reader, view, anchoredOffset, signatureOffset, size, remoteProbeBudget) {
 		if (signatureOffset < 0 || signatureOffset + 4 > size) {
 			return UNDEFINED_VALUE;
 		}
 		if (signatureOffset >= anchoredOffset) {
-			// the target sits inside the tail window already in memory: no extra read needed
 			return getUint32(view, signatureOffset - anchoredOffset);
 		}
 		if (remoteProbeBudget.count > 0) {
@@ -4818,7 +4693,6 @@
 			const signatureArray = await readUint8Array(reader, signatureOffset, 4);
 			return getUint32(getDataView$1(signatureArray), 0);
 		}
-		// out of budget: leave this candidate unverified rather than issue another read
 		return UNDEFINED_VALUE;
 	}
 
@@ -4834,8 +4708,6 @@
 		if (localDirectory.compressionMethod != zipEntry.compressionMethod) {
 			throwAmbiguousArchive("mismatched local file header (compression method)");
 		}
-		// when the data descriptor flag is set, the local signature and sizes are zeroed out; all-zero values are
-		// also tolerated when the flag is clear because some tools produce them (streaming writers predating bit 3)
 		if (!localDirectory.bitFlag.dataDescriptor &&
 			(localDirectory.signature || localDirectory.compressedSize || localDirectory.uncompressedSize) &&
 			(localDirectory.signature != zipEntry.signature ||
@@ -4925,7 +4797,6 @@
 	const ERR_INVALID_ENCRYPTION_STRENGTH = "The strength must equal 1, 2, or 3";
 	const ERR_INVALID_EXTRAFIELD_TYPE = "Extra field type exceeds 65535";
 	const ERR_INVALID_EXTRAFIELD_DATA = "Extra field data exceeds 64KB";
-	// same message as the constant exported by zip-reader.js
 	const ERR_UNSUPPORTED_COMPRESSION = "Compression method not supported";
 	const MIN_UNIX_TIME = -2147483648;
 	const MAX_UNIX_TIME = 2147483647;
@@ -5008,12 +4879,12 @@
 					rawExtraField,
 				} = entry;
 				const { level, languageEncodingFlag, dataDescriptor } = bitFlag;
-				rawExtraFieldZip64 = rawExtraFieldZip64 || new Uint8Array();
-				rawExtraFieldAES = rawExtraFieldAES || new Uint8Array();
-				rawExtraFieldExtendedTimestamp = rawExtraFieldExtendedTimestamp || new Uint8Array();
-				rawExtraFieldNTFS = rawExtraFieldNTFS || new Uint8Array();
-				rawExtraFieldUnix = rawExtraFieldUnix || new Uint8Array();
-				rawExtraField = rawExtraField || new Uint8Array();
+				rawExtraFieldZip64 = rawExtraFieldZip64 || EMPTY_UINT8_ARRAY;
+				rawExtraFieldAES = rawExtraFieldAES || EMPTY_UINT8_ARRAY;
+				rawExtraFieldExtendedTimestamp = rawExtraFieldExtendedTimestamp || EMPTY_UINT8_ARRAY;
+				rawExtraFieldNTFS = rawExtraFieldNTFS || EMPTY_UINT8_ARRAY;
+				rawExtraFieldUnix = rawExtraFieldUnix || EMPTY_UINT8_ARRAY;
+				rawExtraField = rawExtraField || EMPTY_UINT8_ARRAY;
 				if (entry.extraFieldAES) {
 					compressionMethod = COMPRESSION_METHOD_AES;
 				}
@@ -5119,7 +4990,7 @@
 			return false;
 		}
 
-		async close(comment = new Uint8Array(), options = {}) {
+		async close(comment = EMPTY_UINT8_ARRAY, options = {}) {
 			const zipWriter = this;
 			const { pendingAddFileCalls, writer } = this;
 			const { writable } = writer;
@@ -5356,7 +5227,7 @@
 		if (!zipCrypto && (password !== UNDEFINED_VALUE || rawPassword !== UNDEFINED_VALUE) && !(encryptionStrength >= 1 && encryptionStrength <= 3)) {
 			throw new Error(ERR_INVALID_ENCRYPTION_STRENGTH);
 		}
-		let rawExtraField = new Uint8Array();
+		let rawExtraField = EMPTY_UINT8_ARRAY;
 		const extraField = options[PROPERTY_NAME_EXTRA_FIELD];
 		if (extraField) {
 			let extraFieldSize = 0;
@@ -5417,8 +5288,6 @@
 		let maximumCompressedSize = 0;
 		let uncompressedSize = 0;
 		if (passThrough) {
-			// the headers of a passThrough entry describe the payload verbatim: without a
-			// reader they would declare content that is not there
 			if (!reader) {
 				throw new Error(ERR_UNDEFINED_READER);
 			}
@@ -5429,8 +5298,6 @@
 		}
 		const zip64Enabled = zip64 === true;
 		const encrypted = getOptionValue(zipWriter, options, PROPERTY_NAME_ENCRYPTED);
-		// entries without a reader have no payload: write them as empty stored files instead of
-		// declaring a compressed or encrypted content that does not exist
 		const encryptedEntry = Boolean(reader) && (Boolean((password && getLength(password)) || (rawPassword && getLength(rawPassword))) || (passThrough && encrypted));
 		if (!reader) {
 			level = 0;
@@ -5568,7 +5435,6 @@
 				fileEntry.diskNumberStart = writer.diskNumber;
 				fileEntry.offset = getSegmentOffset(zipWriter, writer);
 				if (usdz) {
-					// the padding depends on the entry offset, only known now that the writer is locked
 					const previousMetadataSize = entryInfo.metadataSize;
 					appendExtraFieldUSDZ(entryInfo, zipWriter.offset - writer.diskOffset);
 					fileEntry.size += entryInfo.metadataSize - previousMetadataSize;
@@ -5611,10 +5477,6 @@
 			if (releaseLockWriter) {
 				releaseLockWriter();
 			}
-			// A buffered entry uses a temporary stream (see `createTempStream`). When that stream is
-			// backed by a resource (a file, an OPFS handle, ...) it must be released on every exit path,
-			// including the error path where the stream is otherwise abandoned without being closed or
-			// cancelled. `dispose()` is optional and best-effort so it never masks the original outcome.
 			if (bufferedWrite && fileWriter && fileWriter.dispose) {
 				try {
 					await fileWriter.dispose();
@@ -5641,7 +5503,7 @@
 		async function skipDiskIfNeeded() {
 			if (getLength(headerInfo.localHeaderArray) > writer.availableSize) {
 				writer.availableSize = 0;
-				await writeData(writer, new Uint8Array());
+				await writeData(writer, EMPTY_UINT8_ARRAY);
 			}
 		}
 	}
@@ -5853,13 +5715,9 @@
 			: compressionMethod !== COMPRESSION_METHOD_STORE);
 		let rawLocalExtraFieldZip64;
 		const uncompressedFile = passThrough || !compressed;
-		// entries without a data descriptor are always buffered (cf. getFileEntry), so the
-		// zip64 extra field values can be patched into the local header before flushing it
 		const zip64ExtraFieldComplete = zip64 && (options.bufferedWrite || !dataDescriptor || ((!zip64UncompressedSize && !zip64CompressedSize) || uncompressedFile));
 		const writeLocalExtraFieldZip64 = zip64ExtraFieldComplete || (zip64 && dataDescriptor && (zip64UncompressedSize || zip64CompressedSize));
 		if (zip64 && (zip64UncompressedSize || zip64CompressedSize)) {
-			// APPNOTE 4.5.3: the zip64 extra field of a local header must include both the
-			// uncompressed and compressed size fields
 			const length = 4 + 16;
 			const extraFieldZip64 = createRecordWriter(length);
 			extraFieldZip64.uint16(EXTRAFIELD_TYPE_ZIP64);
@@ -5873,7 +5731,7 @@
 				}
 			}
 		} else {
-			rawLocalExtraFieldZip64 = new Uint8Array();
+			rawLocalExtraFieldZip64 = EMPTY_UINT8_ARRAY;
 		}
 		let rawExtraFieldAES;
 		if (encrypted && !zipCrypto) {
@@ -5883,7 +5741,7 @@
 			rawExtraFieldAES = extraFieldAES.array;
 			rawExtraFieldAES[8] = encryptionStrength;
 		} else {
-			rawExtraFieldAES = new Uint8Array();
+			rawExtraFieldAES = EMPTY_UINT8_ARRAY;
 		}
 		let rawExtraFieldNTFS;
 		let rawExtraFieldExtendedTimestamp;
@@ -5906,8 +5764,7 @@
 				}
 				rawExtraFieldExtendedTimestamp = extraFieldTimestamp.array;
 			} else {
-				// the date cannot be stored as a 32-bit time_t; the NTFS field replaces it
-				rawExtraFieldExtendedTimestamp = new Uint8Array();
+				rawExtraFieldExtendedTimestamp = EMPTY_UINT8_ARRAY;
 			}
 			try {
 				const lastModTimeNTFS = getTimeNTFS(lastModDate);
@@ -5922,10 +5779,10 @@
 				extraFieldNTFS.uint64(getTimeNTFS(creationDate) || lastModTimeNTFS);
 				rawExtraFieldNTFS = extraFieldNTFS.array;
 			} catch {
-				rawExtraFieldNTFS = new Uint8Array();
+				rawExtraFieldNTFS = EMPTY_UINT8_ARRAY;
 			}
 		} else {
-			rawExtraFieldNTFS = rawExtraFieldExtendedTimestamp = new Uint8Array();
+			rawExtraFieldNTFS = rawExtraFieldExtendedTimestamp = EMPTY_UINT8_ARRAY;
 		}
 		let rawExtraFieldUnix;
 		try {
@@ -5951,10 +5808,10 @@
 				extraFieldUnix.uint16((gid === UNDEFINED_VALUE ? 0 : gid) & MAX_16_BITS);
 				rawExtraFieldUnix = extraFieldUnix.array;
 			} else {
-				rawExtraFieldUnix = new Uint8Array();
+				rawExtraFieldUnix = EMPTY_UINT8_ARRAY;
 			}
 		} catch {
-			rawExtraFieldUnix = new Uint8Array();
+			rawExtraFieldUnix = EMPTY_UINT8_ARRAY;
 		}
 		if (compressionMethod === UNDEFINED_VALUE) {
 			compressionMethod = compressed ? COMPRESSION_METHOD_DEFLATE : COMPRESSION_METHOD_STORE;
@@ -6021,7 +5878,7 @@
 			version,
 			compressionMethod,
 			extraFieldExtendedTimestampFlag,
-			rawExtraFieldZip64: new Uint8Array(),
+			rawExtraFieldZip64: EMPTY_UINT8_ARRAY,
 			localExtraFieldZip64Length,
 			rawExtraFieldExtendedTimestamp,
 			rawExtraFieldNTFS,
@@ -6034,7 +5891,6 @@
 	function appendExtraFieldUSDZ(entryInfo, zipWriterOffset) {
 		const { headerInfo } = entryInfo;
 		let { localHeaderArray, extraFieldLength } = headerInfo;
-		let localHeaderArrayView;
 		let extraBytesLength = 64 - ((zipWriterOffset + getLength(localHeaderArray)) % 64);
 		if (extraBytesLength < 4) {
 			extraBytesLength += 64;
@@ -6047,7 +5903,7 @@
 		headerInfo.localHeaderArray = localHeaderArray = new Uint8Array(getLength(previousLocalHeaderArray) + extraBytesLength);
 		arraySet(localHeaderArray, previousLocalHeaderArray);
 		arraySet(localHeaderArray, rawExtraFieldUSDZ, getLength(previousLocalHeaderArray));
-		localHeaderArrayView = getDataView(localHeaderArray);
+		const localHeaderArrayView = getDataView(localHeaderArray);
 		setUint16(localHeaderArrayView, 28, extraFieldLength + extraBytesLength);
 		headerInfo.localHeaderView = localHeaderArrayView;
 		entryInfo.metadataSize += extraBytesLength;
@@ -6055,7 +5911,7 @@
 
 	function packUnixId(id) {
 		if (id === UNDEFINED_VALUE) {
-			return new Uint8Array();
+			return EMPTY_UINT8_ARRAY;
 		} else {
 			const dataArray = new Uint8Array(4);
 			const dataView = getDataView(dataArray);
@@ -6098,7 +5954,7 @@
 		dataDescriptor,
 		dataDescriptorSignature
 	}) {
-		let dataDescriptorArray = new Uint8Array();
+		let dataDescriptorArray = EMPTY_UINT8_ARRAY;
 		let dataDescriptorView, dataDescriptorOffset = 0;
 		let dataDescriptorLength = zip64 ? DATA_DESCRIPTOR_RECORD_ZIP_64_LENGTH : DATA_DESCRIPTOR_RECORD_LENGTH;
 		if (dataDescriptorSignature) {
@@ -6182,7 +6038,6 @@
 			}
 		}
 		if (zip64 && localExtraFieldZip64Length) {
-			// the local zip64 extra field always contains both size slots
 			const localHeaderOffset = HEADER_SIZE + getLength(rawFilename) + 4;
 			setBigUint64(localHeaderView, localHeaderOffset, BigInt(uncompressedSize));
 			setBigUint64(localHeaderView, localHeaderOffset + 8, BigInt(compressedSize));
@@ -6236,7 +6091,7 @@
 				}
 				rawExtraFieldZip64 = extraFieldZip64.array;
 			} else {
-				rawExtraFieldZip64 = new Uint8Array();
+				rawExtraFieldZip64 = EMPTY_UINT8_ARRAY;
 			}
 			fileEntry.rawExtraFieldZip64 = rawExtraFieldZip64;
 			fileEntry.zip64Offset = zip64Offset;
@@ -6251,7 +6106,7 @@
 				extraFieldTimestamp.uint32(lastModTimeUnix);
 				rawExtraFieldTimestamp = extraFieldTimestamp.array;
 			} else {
-				rawExtraFieldTimestamp = new Uint8Array();
+				rawExtraFieldTimestamp = EMPTY_UINT8_ARRAY;
 			}
 			fileEntry.rawExtraFieldExtendedTimestamp = rawExtraFieldTimestamp;
 			const extraFieldLength = getLength(
@@ -6307,7 +6162,7 @@
 				await writeData(writer, directoryArray.slice(directoryDiskOffset, offset));
 				directoryDiskOffset = offset;
 				writer.availableSize = 0;
-				await writeData(writer, new Uint8Array());
+				await writeData(writer, EMPTY_UINT8_ARRAY);
 			}
 			if (indexFileEntry == 0) {
 				cdStartDiskNumber = writer.diskNumber;
@@ -6380,7 +6235,7 @@
 		const endOfdirectoryRecord = createRecordWriter(zip64 ? ZIP64_END_OF_CENTRAL_DIR_TOTAL_LENGTH : END_OF_CENTRAL_DIR_LENGTH);
 		if (getLength(endOfdirectoryRecord.array) + commentLength > writer.availableSize) {
 			writer.availableSize = 0;
-			await writeData(writer, new Uint8Array());
+			await writeData(writer, EMPTY_UINT8_ARRAY);
 		}
 		lastDiskNumber = writer.diskNumber;
 		if (zip64) {
@@ -6477,7 +6332,6 @@
 		return Math.floor(date.getTime() / 1000);
 	}
 
-	// the extended timestamp extra field stores dates as signed 32-bit time_t values
 	function inUnixTimeRange(timeUnix) {
 		return timeUnix >= MIN_UNIX_TIME && timeUnix <= MAX_UNIX_TIME;
 	}
@@ -6650,8 +6504,6 @@
 				uncompressedSize: params.uncompressedSize || 0,
 				passThrough: params.passThrough
 			});
-			// detached entries (e.g. clones) are not registered until they are attached,
-			// otherwise they could never be garbage collected
 			if (parent || !fs.root) {
 				fs.entries[zipEntry.id] = zipEntry;
 			}
@@ -6776,11 +6628,7 @@
 		}
 
 		async getArrayBuffer(options) {
-			// this.data may be a string, a Uint8Array, a data URI or a Blob depending on how the entry
-			// was created, so retrieve the bytes through getUint8Array rather than assuming a Blob; this
-			// also applies the options (password, signal, onprogress...) like the other getData() getters
 			const array = await this.getUint8Array(options);
-			// return the backing buffer directly when the array spans it, slicing the exact bytes otherwise
 			return array.byteOffset || array.byteLength != array.buffer.byteLength
 				? array.buffer.slice(array.byteOffset, array.byteOffset + array.byteLength)
 				: array.buffer;
@@ -7150,7 +6998,6 @@
 				node = node.getChildByName(path[index]);
 			}
 			if (!node) {
-				// exclude detached entries, e.g. clones registered in `entries` but not attached
 				node = this.entries.find(entry => entry && (entry == this.root || entry.isDescendantOf(this.root)) &&
 					entry.getRelativeName() == fullname);
 			}
@@ -7325,7 +7172,6 @@
 	async function initReaders(entry, options) {
 		const fileEntries = [];
 		const pendingEntries = [entry];
-		// per-export map so concurrent exports do not share (and lock) the same readers
 		const readers = new Map();
 		while (pendingEntries.length) {
 			const pendingEntry = pendingEntries.pop();
@@ -7503,7 +7349,6 @@
 		return directoryHandle;
 
 		async function exportChildren(entry, parentHandle) {
-			// Separate files have no ordering constraint, so they can be written concurrently on demand.
 			if (options.concurrent) {
 				const results = await Promise.allSettled(entry.children.map(child => exportChild(child, parentHandle)));
 				const failedResult = results.find(result => result.status == "rejected");
@@ -7525,8 +7370,6 @@
 				} else {
 					const fileHandle = await parentHandle.getFileHandle(child.name, { create: true });
 					const writable = await fileHandle.createWritable();
-					// getData() streams the entry's data into `writable` and closes it (a FileSystemWritableFileStream
-					// only commits the file on close), applying options such as password, signal and onprogress.
 					await child.getData({ writable }, Object.assign({}, options, {
 						onprogress: async progress => {
 							if (options.onprogress) {
