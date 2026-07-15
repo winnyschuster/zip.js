@@ -1,25 +1,44 @@
-import { readFileSync } from "node:fs";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import path from "node:path";
+import process from "node:process";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { domprops } from "../node_modules/terser/tools/domprops.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const MAX_TOKENIZED_STRING_LENGTH = 200;
+const PLATFORM_CALLBACK_NAMES = new Set(["start", "pull", "transform", "flush", "cancel", "write", "close", "abort", "highWaterMark", "size", "mode", "reason"]);
+const WORKER_ARTIFACTS = ["dist/zip-web-worker.js", "dist/zip-web-worker-native.js"];
+
 const bundlePath = process.argv[2] || path.join(ROOT, "index.min.js");
 const jsonPath = process.argv[3];
 
-const unquotedCounts = new Map();
-const quotedNames = new Set();
-collectBundleNames(bundlePath);
+const bundle = { counts: new Map(), quoted: new Set(), stringTokens: new Set() };
+collectNames(bundlePath, bundle);
+const worker = { counts: new Map(), quoted: new Set(), stringTokens: new Set() };
+for (const artifact of WORKER_ARTIFACTS) {
+	const artifactPath = path.join(ROOT, artifact);
+	if (existsSync(artifactPath)) {
+		collectNames(artifactPath, worker);
+	}
+}
 const publicNames = collectDeclarationNames(path.join(ROOT, "index.d.ts"));
 const boundaryNames = collectBoundaryNames(path.join(ROOT, "rollup.config.js"));
 const builtinNames = new Set(domprops);
 
 const classes = { public: [], builtin: [], boundary: [], candidate: [] };
-for (const [name, count] of unquotedCounts) {
-	const bytes = count * (name.length - 1);
-	const entry = { name, count, bytes, quotedAlso: quotedNames.has(name) };
+for (const [name, count] of bundle.counts) {
+	const flags = [];
+	if (bundle.quoted.has(name) || bundle.stringTokens.has(name)) {
+		flags.push("STRING");
+	}
+	if (worker.counts.has(name) || worker.quoted.has(name)) {
+		flags.push("WORKER");
+	}
+	if (PLATFORM_CALLBACK_NAMES.has(name)) {
+		flags.push("CALLBACK");
+	}
+	const entry = { name, count, bytes: count * (name.length - 1), flags };
 	if (builtinNames.has(name)) {
 		classes.builtin.push(entry);
 	} else if (boundaryNames.has(name)) {
@@ -35,42 +54,52 @@ for (const entries of Object.values(classes)) {
 	entries.sort((first, second) => second.bytes - first.bytes);
 }
 const totalBytes = (entries) => entries.reduce((total, entry) => total + entry.bytes, 0);
+const cleanCandidates = classes.candidate.filter((entry) => !entry.flags.length);
+const flaggedCandidates = classes.candidate.filter((entry) => entry.flags.length);
 console.log("bundle:", path.relative(ROOT, bundlePath));
 for (const [className, entries] of Object.entries(classes)) {
 	console.log(className.padEnd(10), String(entries.length).padStart(4), "names", String(totalBytes(entries)).padStart(7), "bytes");
 }
-console.log("\ntop candidates (name, unquoted count, bytes, also-quoted):");
-for (const { name, count, bytes, quotedAlso } of classes.candidate.slice(0, 40)) {
-	console.log("  " + String(count).padStart(5) + "x " + name.padEnd(32) + String(bytes).padStart(6) + " B" + (quotedAlso ? "  QUOTED-ALSO" : ""));
+console.log("candidates:", cleanCandidates.length, "clean (" + totalBytes(cleanCandidates) + " B) /", flaggedCandidates.length, "flagged (" + totalBytes(flaggedCandidates) + " B)");
+console.log("\nflagged candidates (audit first):");
+for (const { name, count, bytes, flags } of flaggedCandidates) {
+	console.log("  " + String(count).padStart(5) + "x " + name.padEnd(32) + String(bytes).padStart(6) + " B  " + flags.join(","));
+}
+console.log("\ntop clean candidates:");
+for (const { name, count, bytes } of cleanCandidates.slice(0, 30)) {
+	console.log("  " + String(count).padStart(5) + "x " + name.padEnd(32) + String(bytes).padStart(6) + " B");
 }
 if (jsonPath) {
 	writeFileSync(jsonPath, JSON.stringify(classes, null, "\t"));
 	console.log("\nwritten:", jsonPath);
 }
 
-function collectBundleNames(filePath) {
+function collectNames(filePath, target) {
 	const source = ts.createSourceFile(filePath, readFileSync(filePath, "utf8"), ts.ScriptTarget.Latest, true);
 	visit(source);
 
 	function visit(node) {
+		if (ts.isStringLiteralLike(node) || ts.isTemplateLiteralToken(node)) {
+			tokenize(node.text);
+		}
 		if (ts.isPropertyAccessExpression(node) && ts.isIdentifier(node.name)) {
-			countUnquoted(node.name.text);
+			count(node.name.text);
 		} else if (ts.isElementAccessExpression(node) && ts.isStringLiteralLike(node.argumentExpression)) {
-			quotedNames.add(node.argumentExpression.text);
+			target.quoted.add(node.argumentExpression.text);
 		} else if (ts.isBinaryExpression(node) && node.operatorToken.kind == ts.SyntaxKind.InKeyword && ts.isStringLiteralLike(node.left)) {
-			quotedNames.add(node.left.text);
+			target.quoted.add(node.left.text);
 		} else if (isMemberDeclaration(node)) {
 			if (ts.isIdentifier(node.name)) {
-				countUnquoted(node.name.text);
+				count(node.name.text);
 			} else if (ts.isStringLiteralLike(node.name)) {
-				quotedNames.add(node.name.text);
+				target.quoted.add(node.name.text);
 			}
 		} else if (ts.isShorthandPropertyAssignment(node)) {
-			countUnquoted(node.name.text);
+			count(node.name.text);
 		} else if (ts.isBindingElement(node) && node.propertyName && ts.isIdentifier(node.propertyName)) {
-			countUnquoted(node.propertyName.text);
+			count(node.propertyName.text);
 		} else if (ts.isBindingElement(node) && !node.propertyName && ts.isIdentifier(node.name) && ts.isObjectBindingPattern(node.parent)) {
-			countUnquoted(node.name.text);
+			count(node.name.text);
 		}
 		ts.forEachChild(node, visit);
 	}
@@ -80,14 +109,24 @@ function collectBundleNames(filePath) {
 			ts.isGetAccessorDeclaration(node) || ts.isSetAccessorDeclaration(node)) && node.name;
 	}
 
-	function countUnquoted(name) {
-		unquotedCounts.set(name, (unquotedCounts.get(name) || 0) + 1);
+	function count(name) {
+		target.counts.set(name, (target.counts.get(name) || 0) + 1);
+	}
+
+	function tokenize(text) {
+		if (text.length <= MAX_TOKENIZED_STRING_LENGTH) {
+			for (const token of text.split(/[^A-Za-z0-9_$]+/)) {
+				if (token.length > 2) {
+					target.stringTokens.add(token);
+				}
+			}
+		}
 	}
 }
 
 function collectDeclarationNames(filePath) {
 	const names = new Set();
-	const source = ts.createSourceFile(filePath, readFileSync(filePath, "utf8"), ts.ScriptTarget.Latest, false);
+	const source = ts.createSourceFile(filePath, readFileSync(filePath, "utf8"), ts.ScriptTarget.Latest, true);
 	visit(source);
 	return names;
 
