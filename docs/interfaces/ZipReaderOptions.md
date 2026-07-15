@@ -6,7 +6,7 @@
 
 # Interface: ZipReaderOptions
 
-Defined in: [index.d.ts:977](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L977)
+Defined in: [index.d.ts:977](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L977)
 
 Represents options passed to the constructor of [ZipReader](../classes/ZipReader.md) and [FileEntry#getData](FileEntry.md#getdata).
 
@@ -21,7 +21,7 @@ Represents options passed to the constructor of [ZipReader](../classes/ZipReader
 
 > `optional` **checkAmbiguity?**: `boolean`
 
-Defined in: [index.d.ts:997](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L997)
+Defined in: [index.d.ts:997](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L997)
 
 `true` to throw an [ERR\_AMBIGUOUS\_ARCHIVE](../variables/ERR_AMBIGUOUS_ARCHIVE.md) error when calling [FileEntry#getData](FileEntry.md#getdata) if the local
 file header of the entry disagrees with its central directory record in a way that could make other tools
@@ -42,7 +42,7 @@ false
 
 > `optional` **checkOverlappingEntry?**: `boolean`
 
-Defined in: [index.d.ts:1017](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L1017)
+Defined in: [index.d.ts:1017](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L1017)
 
 `true` to throw an [ERR\_OVERLAPPING\_ENTRY](../variables/ERR_OVERLAPPING_ENTRY.md) error when calling [FileEntry#getData](FileEntry.md#getdata) if the entry
  overlaps with another entry on which [FileEntry#getData](FileEntry.md#getdata) has already been called (with the option
@@ -60,7 +60,7 @@ false
 
 > `optional` **checkOverlappingEntryOnly?**: `boolean`
 
-Defined in: [index.d.ts:1026](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L1026)
+Defined in: [index.d.ts:1026](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L1026)
 
 `true` to throw an [ERR\_OVERLAPPING\_ENTRY](../variables/ERR_OVERLAPPING_ENTRY.md) error when calling [FileEntry#getData](FileEntry.md#getdata) if the entry
  overlaps with another entry on which [FileEntry#getData](FileEntry.md#getdata) has already been called (with the option
@@ -79,7 +79,7 @@ false
 
 > `optional` **checkPasswordOnly?**: `boolean`
 
-Defined in: [index.d.ts:1003](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L1003)
+Defined in: [index.d.ts:1003](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L1003)
 
 `true` to check only if the password is valid.
 
@@ -95,7 +95,7 @@ false
 
 > `optional` **checkSignature?**: `boolean`
 
-Defined in: [index.d.ts:1009](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L1009)
+Defined in: [index.d.ts:1009](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L1009)
 
 `true` to check the signature of the entry.
 
@@ -111,7 +111,7 @@ false
 
 > `optional` **passThrough?**: `boolean`
 
-Defined in: [index.d.ts:1034](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L1034)
+Defined in: [index.d.ts:1034](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L1034)
 
 `true` to read the data as-is without decompressing it and without decrypting it.
 
@@ -121,7 +121,7 @@ Defined in: [index.d.ts:1034](https://github.com/gildas-lormeau/zip.js/blob/e578
 
 > `optional` **password?**: `string`
 
-Defined in: [index.d.ts:1030](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L1030)
+Defined in: [index.d.ts:1030](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L1030)
 
 The password used to decrypt the content of the entry.
 
@@ -131,7 +131,7 @@ The password used to decrypt the content of the entry.
 
 > `optional` **preventClose?**: `boolean`
 
-Defined in: [index.d.ts:1048](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L1048)
+Defined in: [index.d.ts:1048](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L1048)
 
 `true` to prevent closing of [Writer#writable](../classes/Writer.md#writable) when calling [FileEntry#getData](FileEntry.md#getdata).
 
@@ -147,7 +147,7 @@ false
 
 > `optional` **rawPassword?**: `Uint8Array`\<`ArrayBufferLike`\>
 
-Defined in: [index.d.ts:1038](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L1038)
+Defined in: [index.d.ts:1038](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L1038)
 
 The password used to encrypt the content of the entry (raw).
 
@@ -157,7 +157,7 @@ The password used to encrypt the content of the entry (raw).
 
 > `optional` **signal?**: `AbortSignal`
 
-Defined in: [index.d.ts:1042](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L1042)
+Defined in: [index.d.ts:1042](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L1042)
 
 The `AbortSignal` instance used to cancel the decompression.
 
@@ -167,7 +167,7 @@ The `AbortSignal` instance used to cancel the decompression.
 
 > `optional` **strictness?**: `"balanced"` \| `"strict"` \| `"tolerant"`
 
-Defined in: [index.d.ts:986](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L986)
+Defined in: [index.d.ts:986](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L986)
 
 How tolerant the reader should be when the local file header of an entry disagrees with its central
 directory record. `"strict"` throws an [ERR\_AMBIGUOUS\_ARCHIVE](../variables/ERR_AMBIGUOUS_ARCHIVE.md) error (equivalent to

@@ -6,7 +6,7 @@
 
 # Class: HttpReader
 
-Defined in: [index.d.ts:503](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L503)
+Defined in: [index.d.ts:503](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L503)
 
 Represents a [Reader](Reader.md) instance used to fetch data from a URL.
 
@@ -24,7 +24,7 @@ Represents a [Reader](Reader.md) instance used to fetch data from a URL.
 
 > **new HttpReader**(`url`, `options?`): `HttpReader`
 
-Defined in: [index.d.ts:510](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L510)
+Defined in: [index.d.ts:510](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L510)
 
 Creates the HttpReader instance
 
@@ -56,7 +56,7 @@ The options.
 
 > **readable**: `ReadableStream`
 
-Defined in: [index.d.ts:449](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L449)
+Defined in: [index.d.ts:449](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L449)
 
 The `ReadableStream` instance.
 
@@ -70,7 +70,7 @@ The `ReadableStream` instance.
 
 > **size**: `number`
 
-Defined in: [index.d.ts:453](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L453)
+Defined in: [index.d.ts:453](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L453)
 
 The total size of the data in bytes.
 
@@ -84,7 +84,7 @@ The total size of the data in bytes.
 
 > `optional` **init**(): `Promise`\<`void`\>
 
-Defined in: [index.d.ts:457](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L457)
+Defined in: [index.d.ts:457](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L457)
 
 Initializes the instance asynchronously
 
@@ -102,7 +102,7 @@ Initializes the instance asynchronously
 
 > **readUint8Array**(`index`, `length`): `Promise`\<`Uint8Array`\<`ArrayBufferLike`\>\>
 
-Defined in: [index.d.ts:465](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L465)
+Defined in: [index.d.ts:465](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L465)
 
 Reads a chunk of data
 

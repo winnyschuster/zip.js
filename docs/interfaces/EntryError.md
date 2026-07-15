@@ -6,7 +6,7 @@
 
 # Interface: EntryError
 
-Defined in: [index.d.ts:1203](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L1203)
+Defined in: [index.d.ts:1203](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L1203)
 
 Represents an error raised while processing an entry, decorated with entry context.
 
@@ -20,7 +20,7 @@ Represents an error raised while processing an entry, decorated with entry conte
 
 > `optional` **corruptedEntry?**: `boolean`
 
-Defined in: [index.d.ts:1207](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L1207)
+Defined in: [index.d.ts:1207](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L1207)
 
 `true` if the zip file is corrupted because the entry data could not be written entirely.
 
@@ -30,7 +30,7 @@ Defined in: [index.d.ts:1207](https://github.com/gildas-lormeau/zip.js/blob/e578
 
 > `optional` **entryId?**: `number`
 
-Defined in: [index.d.ts:1211](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L1211)
+Defined in: [index.d.ts:1211](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L1211)
 
 The id of the related [ZipEntry](../classes/ZipEntry.md) (filesystem API).
 

@@ -6,7 +6,7 @@
 
 # Class: SplitDataReader
 
-Defined in: [index.d.ts:491](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L491)
+Defined in: [index.d.ts:491](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L491)
 
 Represents a [Reader](Reader.md) instance used to read data provided as an array of [ReadableReader](../interfaces/ReadableReader.md) instances (e.g. split zip files).
 
@@ -20,7 +20,7 @@ Represents a [Reader](Reader.md) instance used to read data provided as an array
 
 > **new SplitDataReader**(`value`): `SplitDataReader`
 
-Defined in: [index.d.ts:445](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L445)
+Defined in: [index.d.ts:445](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L445)
 
 Creates the [Reader](Reader.md) instance
 
@@ -28,7 +28,7 @@ Creates the [Reader](Reader.md) instance
 
 ##### value
 
-[`Reader`](Reader.md)\<`unknown`\>[] \| [`ReadableReader`](../interfaces/ReadableReader.md)[] \| `ReadableStream`\<`any`\>[]
+`ReadableStream`\<`any`\>[] \| [`Reader`](Reader.md)\<`unknown`\>[] \| [`ReadableReader`](../interfaces/ReadableReader.md)[]
 
 The data to read.
 
@@ -46,7 +46,7 @@ The data to read.
 
 > **readable**: `ReadableStream`
 
-Defined in: [index.d.ts:449](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L449)
+Defined in: [index.d.ts:449](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L449)
 
 The `ReadableStream` instance.
 
@@ -60,7 +60,7 @@ The `ReadableStream` instance.
 
 > **size**: `number`
 
-Defined in: [index.d.ts:453](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L453)
+Defined in: [index.d.ts:453](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L453)
 
 The total size of the data in bytes.
 
@@ -74,7 +74,7 @@ The total size of the data in bytes.
 
 > `optional` **init**(): `Promise`\<`void`\>
 
-Defined in: [index.d.ts:457](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L457)
+Defined in: [index.d.ts:457](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L457)
 
 Initializes the instance asynchronously
 
@@ -92,7 +92,7 @@ Initializes the instance asynchronously
 
 > **readUint8Array**(`index`, `length`): `Promise`\<`Uint8Array`\<`ArrayBufferLike`\>\>
 
-Defined in: [index.d.ts:465](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L465)
+Defined in: [index.d.ts:465](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L465)
 
 Reads a chunk of data
 

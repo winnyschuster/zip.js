@@ -6,7 +6,7 @@
 
 # Class: BlobWriter
 
-Defined in: [index.d.ts:664](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L664)
+Defined in: [index.d.ts:664](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L664)
 
 Represents a [WritableWriter](../interfaces/WritableWriter.md) instance used to retrieve the written data as a `Blob` instance.
 
@@ -21,7 +21,7 @@ Represents a [WritableWriter](../interfaces/WritableWriter.md) instance used to 
 
 > **new BlobWriter**(`mimeString?`): `BlobWriter`
 
-Defined in: [index.d.ts:678](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L678)
+Defined in: [index.d.ts:678](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L678)
 
 Creates the BlobWriter instance
 
@@ -43,7 +43,7 @@ The MIME type of the content.
 
 > **writable**: `WritableStream`
 
-Defined in: [index.d.ts:668](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L668)
+Defined in: [index.d.ts:668](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L668)
 
 The `WritableStream` instance.
 
@@ -57,7 +57,7 @@ The `WritableStream` instance.
 
 > **getData**(): `Promise`\<`Blob`\>
 
-Defined in: [index.d.ts:684](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L684)
+Defined in: [index.d.ts:684](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L684)
 
 Retrieves all the written data
 
@@ -73,7 +73,7 @@ A promise resolving to the written data.
 
 > **init**(): `Promise`\<`void`\>
 
-Defined in: [index.d.ts:672](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L672)
+Defined in: [index.d.ts:672](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L672)
 
 Initializes the instance asynchronously
 

@@ -6,7 +6,7 @@
 
 # Interface: EntryOnprogressOptions
 
-Defined in: [index.d.ts:2064](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L2064)
+Defined in: [index.d.ts:2064](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L2064)
 
 Represents options passed to [ZipReader#getEntries](../classes/ZipReader.md#getentries), [ZipReader#getEntriesGenerator](../classes/ZipReader.md#getentriesgenerator), and [ZipWriter#close](../classes/ZipWriter.md#close).
 
@@ -21,7 +21,7 @@ Represents options passed to [ZipReader#getEntries](../classes/ZipReader.md#gete
 
 > `optional` **onprogress**(`progress`, `total`, `entry`): `void` \| `Promise`\<`void`\>
 
-Defined in: [index.d.ts:2073](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L2073)
+Defined in: [index.d.ts:2073](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L2073)
 
 The function called each time an entry is read/written.
 

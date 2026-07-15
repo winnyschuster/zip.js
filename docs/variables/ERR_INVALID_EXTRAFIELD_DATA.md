@@ -8,6 +8,6 @@
 
 > `const` **ERR\_INVALID\_EXTRAFIELD\_DATA**: `string`
 
-Defined in: [index.d.ts:2772](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L2772)
+Defined in: [index.d.ts:2772](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L2772)
 
 Invalid extra field data error

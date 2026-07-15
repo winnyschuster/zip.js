@@ -6,7 +6,7 @@
 
 # Class: ZipWriter\<Type\>
 
-Defined in: [index.d.ts:1648](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L1648)
+Defined in: [index.d.ts:1648](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L1648)
 
 Represents an instance used to create a zip file.
 
@@ -40,7 +40,7 @@ const blob = await blobWriter.getData();
 
 > **new ZipWriter**\<`Type`\>(`writer`, `options?`): `ZipWriter`\<`Type`\>
 
-Defined in: [index.d.ts:1655](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L1655)
+Defined in: [index.d.ts:1655](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L1655)
 
 Creates the ZipWriter instance
 
@@ -68,7 +68,7 @@ The options.
 
 > `readonly` `optional` **hasCorruptedEntries?**: `boolean`
 
-Defined in: [index.d.ts:1669](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L1669)
+Defined in: [index.d.ts:1669](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L1669)
 
 `true` if the zip contains at least one entry that has been partially written.
 
@@ -78,7 +78,7 @@ Defined in: [index.d.ts:1669](https://github.com/gildas-lormeau/zip.js/blob/e578
 
 > **add**\<`ReaderType`\>(`filename`, `reader?`, `options?`): `Promise`\<[`EntryMetaData`](../interfaces/EntryMetaData.md)\>
 
-Defined in: [index.d.ts:1699](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L1699)
+Defined in: [index.d.ts:1699](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L1699)
 
 Adds an entry into the zip file
 
@@ -101,7 +101,7 @@ which is interpreted inconsistently by zip tools.
 
 ##### reader?
 
-`ReadableStream`\<`any`\> \| [`ReadableReader`](../interfaces/ReadableReader.md) \| [`Reader`](Reader.md)\<`unknown`\>[] \| [`ReadableReader`](../interfaces/ReadableReader.md)[] \| `ReadableStream`\<`any`\>[] \| [`Reader`](Reader.md)\<`ReaderType`\>
+`ReadableStream`\<`any`\> \| `ReadableStream`\<`any`\>[] \| [`ReadableReader`](../interfaces/ReadableReader.md) \| [`Reader`](Reader.md)\<`unknown`\>[] \| [`ReadableReader`](../interfaces/ReadableReader.md)[] \| [`Reader`](Reader.md)\<`ReaderType`\>
 
 The  [Reader](Reader.md) instance used to read the content of the entry.
 
@@ -123,7 +123,7 @@ A promise resolving to an [EntryMetaData](../interfaces/EntryMetaData.md) instan
 
 > **close**(`comment?`, `options?`): `Promise`\<`Type`\>
 
-Defined in: [index.d.ts:1727](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L1727)
+Defined in: [index.d.ts:1727](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L1727)
 
 Writes the entries directory, writes the global comment, and returns the content of the zip file
 
@@ -153,7 +153,7 @@ The content of the zip file.
 
 > **prependZip**\<`ReaderType`\>(`reader`): `Promise`\<`void`\>
 
-Defined in: [index.d.ts:1678](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L1678)
+Defined in: [index.d.ts:1678](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L1678)
 
 Adds an existing zip file at the beginning of the current zip. This method
 cannot be called after the first call to [ZipWriter#add](#add).
@@ -168,7 +168,7 @@ cannot be called after the first call to [ZipWriter#add](#add).
 
 ##### reader
 
-`ReadableStream`\<`any`\> \| [`ReadableReader`](../interfaces/ReadableReader.md) \| [`Reader`](Reader.md)\<`unknown`\>[] \| [`ReadableReader`](../interfaces/ReadableReader.md)[] \| `ReadableStream`\<`any`\>[] \| [`Reader`](Reader.md)\<`ReaderType`\>
+`ReadableStream`\<`any`\> \| `ReadableStream`\<`any`\>[] \| [`ReadableReader`](../interfaces/ReadableReader.md) \| [`Reader`](Reader.md)\<`unknown`\>[] \| [`ReadableReader`](../interfaces/ReadableReader.md)[] \| [`Reader`](Reader.md)\<`ReaderType`\>
 
 The [Reader](Reader.md) instance used to read the content of the zip file.
 
@@ -184,7 +184,7 @@ A promise resolving when the zip file has been added.
 
 > **remove**(`entry`): `boolean`
 
-Defined in: [index.d.ts:1718](https://github.com/gildas-lormeau/zip.js/blob/e5781a79ff06ae1a02698642150807a30282543c/index.d.ts#L1718)
+Defined in: [index.d.ts:1718](https://github.com/gildas-lormeau/zip.js/blob/7c729fa77258b693a14e1de637da499fa2bb1021/index.d.ts#L1718)
 
 Removes an entry from the central directory that will be written for the zip file. The entry
 data itself cannot be removed because it has already been streamed to the output.
