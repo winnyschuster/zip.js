@@ -409,6 +409,18 @@ export interface BlobTempStreamOptions {
 export function createBlobTempStream(options?: BlobTempStreamOptions): () => TempStream;
 
 /**
+ * Builds a {@link ZipWriterConstructorOptions.createTempStream} factory that spills the data of buffered entries to the Origin Private File System (OPFS) via `FileSystemSyncAccessHandle` instead of keeping it in memory.
+ *
+ * This is the fastest disk-backed temporary storage on the web platform: it behaves like {@link createOPFSTempStream} (same options, same bounded-memory profile) but writes roughly 2.5 times faster in Chromium and Firefox and reads back several times faster in Firefox and Safari, making disk-backed staging nearly as fast as the in-memory default.
+ *
+ * `FileSystemSyncAccessHandle` is only exposed in dedicated workers, so this helper requires running the {@link ZipWriter} inside a worker; it throws when created in an unsupported context unless `getDirectory` is provided.
+ *
+ * @param options The options.
+ * @returns A factory suitable for {@link ZipWriterConstructorOptions.createTempStream}.
+ */
+export function createSyncAccessHandleTempStream(options?: OPFSTempStreamOptions): () => TempStream;
+
+/**
  * Represents an instance used to read or write unknown type of data.
  *
  * zip.js can handle multiple types of data thanks to a generic API. This feature is based on 2 abstract constructors: {@link Reader} and {@link Writer}.
@@ -1850,7 +1862,7 @@ export interface ZipWriterConstructorOptions extends WorkerConfiguration {
    * The `writable` side receives compressed entry data. The `readable` side is consumed when the entry is replayed into the final zip stream.
    * The optional `dispose` method is called once the entry has been processed (on success, error, or abort) so a resource-backed buffer can release its resource.
    *
-   * See {@link createOPFSTempStream} for a ready-made OPFS-backed implementation and {@link createBlobTempStream} for a `Blob`-backed one.
+   * See {@link createOPFSTempStream} for a ready-made OPFS-backed implementation, {@link createSyncAccessHandleTempStream} for a faster worker-only variant, and {@link createBlobTempStream} for a `Blob`-backed one.
    */
   createTempStream?: () => TempStream | Promise<TempStream>;
   /**

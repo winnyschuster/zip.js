@@ -40,6 +40,7 @@ export default ([
 	{ title: "Temp stream dispose hook", script: "./test-temp-stream-dispose.js" },
 	{ title: "OPFS temp stream", script: "./test-opfs-temp-stream.js" },
 	{ title: "Blob temp stream", script: "./test-blob-temp-stream.js" },
+	{ title: "Sync access handle temp stream", script: "./test-sync-access-handle-temp-stream.js" },
 	{ title: "OPFS temp stream (real OPFS)", script: "./test-opfs-temp-stream-browser.js", env: ["browser"] },
 	{ title: "Keep order (concurrent add)", script: "./test-keep-order-concurrent.js" },
 	{ title: "Data descriptor signature", script: "./test-data-descriptor-signature.js" },
