@@ -382,6 +382,30 @@ export interface OPFSTempStreamOptions {
 export function createOPFSTempStream(options?: OPFSTempStreamOptions): () => Promise<TempStream>;
 
 /**
+ * Options for {@link createBlobTempStream}.
+ */
+export interface BlobTempStreamOptions {
+  /**
+   * Spill a buffered entry to a `Blob` once its buffered data exceeds this size, in bytes. Smaller entries stay in memory.
+   *
+   * @defaultValue 1048576
+   */
+  thresholdBytes?: number;
+}
+
+/**
+ * Builds a {@link ZipWriterConstructorOptions.createTempStream} factory that spills the data of buffered entries into a `Blob` instead of keeping it in memory.
+ *
+ * An entry stays in memory until it exceeds `thresholdBytes`, then its data is transferred incrementally into a `Blob` built with `new Response(stream).blob()` and streamed back afterwards.
+ * In Chromium-based browsers, `Blob` data is managed outside the page and paged to disk under memory pressure, so peak memory stays bounded on large buffered entries without any storage permission or cleanup obligation.
+ * In other engines and in non-browser runtimes, the `Blob` is held in memory: the helper stays functional but does not bound memory there; prefer {@link createOPFSTempStream} or a file-backed implementation in those environments.
+ *
+ * @param options The options.
+ * @returns A factory suitable for {@link ZipWriterConstructorOptions.createTempStream}.
+ */
+export function createBlobTempStream(options?: BlobTempStreamOptions): () => TempStream;
+
+/**
  * Represents an instance used to read or write unknown type of data.
  *
  * zip.js can handle multiple types of data thanks to a generic API. This feature is based on 2 abstract constructors: {@link Reader} and {@link Writer}.
@@ -1823,7 +1847,7 @@ export interface ZipWriterConstructorOptions extends WorkerConfiguration {
    * The `writable` side receives compressed entry data. The `readable` side is consumed when the entry is replayed into the final zip stream.
    * The optional `dispose` method is called once the entry has been processed (on success, error, or abort) so a resource-backed buffer can release its resource.
    *
-   * See {@link createOPFSTempStream} for a ready-made OPFS-backed implementation.
+   * See {@link createOPFSTempStream} for a ready-made OPFS-backed implementation and {@link createBlobTempStream} for a `Blob`-backed one.
    */
   createTempStream?: () => TempStream | Promise<TempStream>;
   /**
