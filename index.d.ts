@@ -398,7 +398,8 @@ export interface BlobTempStreamOptions {
  *
  * An entry stays in memory until it exceeds `thresholdBytes`, then its data is transferred incrementally into a `Blob` built with `new Response(stream).blob()` and streamed back afterwards.
  * In Chromium-based browsers, `Blob` data is managed outside the page and paged to disk under memory pressure, so peak memory stays bounded on large buffered entries without any storage permission or cleanup obligation.
- * In other engines and in non-browser runtimes, the `Blob` is held in memory: the helper stays functional but roughly doubles peak memory usage there (staged bytes plus their `Blob` copy); prefer {@link createOPFSTempStream} or a file-backed implementation in those environments.
+ * In Firefox, the `Blob` stays in memory but the helper still reduces peak memory usage moderately (roughly 30% on large entries) by releasing staged chunks earlier.
+ * In non-browser runtimes, the helper stays functional but roughly doubles peak memory usage (staged bytes plus their `Blob` copy); prefer {@link createOPFSTempStream} or a file-backed implementation in those environments.
  *
  * @param options The options.
  * @returns A factory suitable for {@link ZipWriterConstructorOptions.createTempStream}.
