@@ -2445,7 +2445,7 @@
 			const { value, readable, writable } = message;
 			const transferables = [];
 			if (value) {
-				message.value = value;
+				message.value = value.byteOffset || value.byteLength != value.buffer.byteLength ? new Uint8Array(value) : value;
 				transferables.push(message.value.buffer);
 			}
 			if (transferStreams && transferStreamsSupported) {
@@ -6646,13 +6646,13 @@
 	 */
 
 
-	const DEFAULT_THRESHOLD = 1024 * 1024;
-	const DEFAULT_DIRECTORY_NAME = ".zip.js-temp";
+	const DEFAULT_THRESHOLD$2 = 1024 * 1024;
+	const DEFAULT_DIRECTORY_NAME$1 = ".zip.js-temp";
 
 	function createOPFSTempStream(options = {}) {
 		const {
-			thresholdBytes = DEFAULT_THRESHOLD,
-			directoryName = DEFAULT_DIRECTORY_NAME,
+			thresholdBytes = DEFAULT_THRESHOLD$2,
+			directoryName = DEFAULT_DIRECTORY_NAME$1,
 			getDirectory = () => navigator.storage.getDirectory()
 		} = options;
 		let directoryHandlePromise;
@@ -6781,6 +6781,269 @@
 	 */
 
 
+	const DEFAULT_THRESHOLD$1 = 1024 * 1024;
+
+	function createBlobTempStream(options = {}) {
+		const {
+			thresholdBytes = DEFAULT_THRESHOLD$1
+		} = options;
+		return function () {
+			const memoryChunks = [];
+			let bufferedSize = 0;
+			let spilled = false;
+			let blobWriter, blobPromise, blobReader;
+
+			async function spillToBlob() {
+				const transformStream = new TransformStream();
+				blobPromise = new Response(transformStream.readable).blob();
+				blobWriter = transformStream.writable.getWriter();
+				spilled = true;
+				for (const chunk of memoryChunks) {
+					await blobWriter.write(chunk);
+				}
+				memoryChunks.length = 0;
+			}
+
+			const writable = new WritableStream({
+				async write(chunk) {
+					if (spilled) {
+						await blobWriter.write(chunk);
+					} else {
+						memoryChunks.push(chunk);
+						bufferedSize += chunk.length;
+						if (bufferedSize > thresholdBytes) {
+							await spillToBlob();
+						}
+					}
+				},
+				async close() {
+					if (blobWriter) {
+						await blobWriter.close();
+						blobWriter = null;
+					}
+				}
+			});
+
+			let memoryIndex = 0;
+			const readable = new ReadableStream({
+				async pull(controller) {
+					if (spilled) {
+						if (!blobReader) {
+							const blob = await blobPromise;
+							blobReader = blob.stream().getReader();
+						}
+						const { value, done } = await blobReader.read();
+						if (done) {
+							controller.close();
+						} else {
+							controller.enqueue(value);
+						}
+					} else if (memoryIndex < memoryChunks.length) {
+						controller.enqueue(memoryChunks[memoryIndex++]);
+					} else {
+						controller.close();
+					}
+				},
+				async cancel(reason) {
+					if (blobReader) {
+						await blobReader.cancel(reason);
+					}
+				}
+			}, { highWaterMark: 0 });
+			async function dispose() {
+				if (blobWriter) {
+					try {
+						await blobWriter.abort();
+					} catch {
+						// ignored
+					}
+					blobWriter = null;
+				}
+				if (blobPromise) {
+					blobPromise.catch(() => {
+						// ignored
+					});
+					blobPromise = null;
+				}
+				memoryChunks.length = 0;
+			}
+
+			return { writable, readable, dispose };
+		};
+	}
+
+	/*
+	 Copyright (c) 2025 Gildas Lormeau. All rights reserved.
+
+	 Redistribution and use in source and binary forms, with or without
+	 modification, are permitted provided that the following conditions are met:
+
+	 1. Redistributions of source code must retain the above copyright notice,
+	 this list of conditions and the following disclaimer.
+
+	 2. Redistributions in binary form must reproduce the above copyright
+	 notice, this list of conditions and the following disclaimer in
+	 the documentation and/or other materials provided with the distribution.
+
+	 3. The names of the authors may not be used to endorse or promote products
+	 derived from this software without specific prior written permission.
+
+	 THIS SOFTWARE IS PROVIDED ''AS IS'' AND ANY EXPRESSED OR IMPLIED WARRANTIES,
+	 INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+	 FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL JCRAFT,
+	 INC. OR ANY CONTRIBUTORS TO THIS SOFTWARE BE LIABLE FOR ANY DIRECT, INDIRECT,
+	 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+	 LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+	 OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+	 LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+	 NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+	 EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+	 */
+
+
+	const DEFAULT_THRESHOLD = 1024 * 1024;
+	const DEFAULT_DIRECTORY_NAME = ".zip.js-temp";
+	const READ_CHUNK_SIZE = 512 * 1024;
+	const ERR_UNSUPPORTED_CONTEXT = "createSyncAccessHandle is only available in dedicated workers";
+
+	function createSyncAccessHandleTempStream(options = {}) {
+		const {
+			thresholdBytes = DEFAULT_THRESHOLD,
+			directoryName = DEFAULT_DIRECTORY_NAME,
+			getDirectory
+		} = options;
+		if (!getDirectory &&
+			(typeof FileSystemFileHandle == "undefined" || !FileSystemFileHandle.prototype.createSyncAccessHandle)) {
+			throw new Error(ERR_UNSUPPORTED_CONTEXT);
+		}
+		const getRootDirectory = getDirectory || (() => navigator.storage.getDirectory());
+		let directoryHandlePromise;
+		function getTempDirectory() {
+			if (!directoryHandlePromise) {
+				directoryHandlePromise = Promise.resolve(getRootDirectory())
+					.then(root => root.getDirectoryHandle(directoryName, { create: true }));
+			}
+			return directoryHandlePromise;
+		}
+		return function () {
+			const memoryChunks = [];
+			let bufferedSize = 0;
+			let spilled = false;
+			let fileName, accessHandle;
+			let writeOffset = 0;
+			let readOffset = 0;
+
+			async function spillToFile() {
+				const directoryHandle = await getTempDirectory();
+				fileName = crypto.randomUUID();
+				const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
+				accessHandle = await fileHandle.createSyncAccessHandle();
+				spilled = true;
+				for (const chunk of memoryChunks) {
+					accessHandle.write(chunk, { at: writeOffset });
+					writeOffset += chunk.length;
+				}
+				memoryChunks.length = 0;
+			}
+
+			const writable = new WritableStream({
+				async write(chunk) {
+					if (spilled) {
+						accessHandle.write(chunk, { at: writeOffset });
+						writeOffset += chunk.length;
+					} else {
+						memoryChunks.push(chunk);
+						bufferedSize += chunk.length;
+						if (bufferedSize > thresholdBytes) {
+							await spillToFile();
+						}
+					}
+				},
+				close() {
+					if (accessHandle) {
+						accessHandle.flush();
+					}
+				}
+			});
+
+			let memoryIndex = 0;
+			const readable = new ReadableStream({
+				pull(controller) {
+					if (spilled) {
+						const remaining = writeOffset - readOffset;
+						if (remaining <= 0) {
+							controller.close();
+							return;
+						}
+						const buffer = new Uint8Array(Math.min(READ_CHUNK_SIZE, remaining));
+						const read = accessHandle.read(buffer, { at: readOffset });
+						if (read) {
+							readOffset += read;
+							controller.enqueue(buffer.subarray(0, read));
+						} else {
+							controller.close();
+						}
+					} else if (memoryIndex < memoryChunks.length) {
+						controller.enqueue(memoryChunks[memoryIndex++]);
+					} else {
+						controller.close();
+					}
+				}
+			}, { highWaterMark: 0 });
+			async function dispose() {
+				if (accessHandle) {
+					try {
+						accessHandle.close();
+					} catch {
+						// ignored
+					}
+					accessHandle = null;
+				}
+				if (fileName) {
+					try {
+						const directoryHandle = await getTempDirectory();
+						await directoryHandle.removeEntry(fileName);
+					} catch {
+						// ignored
+					}
+					fileName = null;
+				}
+				memoryChunks.length = 0;
+			}
+
+			return { writable, readable, dispose };
+		};
+	}
+
+	/*
+	 Copyright (c) 2025 Gildas Lormeau. All rights reserved.
+
+	 Redistribution and use in source and binary forms, with or without
+	 modification, are permitted provided that the following conditions are met:
+
+	 1. Redistributions of source code must retain the above copyright notice,
+	 this list of conditions and the following disclaimer.
+
+	 2. Redistributions in binary form must reproduce the above copyright
+	 notice, this list of conditions and the following disclaimer in
+	 the documentation and/or other materials provided with the distribution.
+
+	 3. The names of the authors may not be used to endorse or promote products
+	 derived from this software without specific prior written permission.
+
+	 THIS SOFTWARE IS PROVIDED ''AS IS'' AND ANY EXPRESSED OR IMPLIED WARRANTIES,
+	 INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+	 FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL JCRAFT,
+	 INC. OR ANY CONTRIBUTORS TO THIS SOFTWARE BE LIABLE FOR ANY DIRECT, INDIRECT,
+	 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+	 LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+	 OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+	 LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+	 NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+	 EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+	 */
+
+
 	try {
 		configure({ baseURI: (typeof document === 'undefined' && typeof location === 'undefined' ? require('u' + 'rl').pathToFileURL(__filename).href : typeof document === 'undefined' ? location.href : (_documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === 'SCRIPT' && _documentCurrentScript.src || new URL('zip-core.js', document.baseURI).href)) });
 	} catch {
@@ -6837,7 +7100,9 @@
 	exports.ZipWriter = ZipWriter;
 	exports.ZipWriterStream = ZipWriterStream;
 	exports.configure = configure;
+	exports.createBlobTempStream = createBlobTempStream;
 	exports.createOPFSTempStream = createOPFSTempStream;
+	exports.createSyncAccessHandleTempStream = createSyncAccessHandleTempStream;
 	exports.getMimeType = getMimeType;
 	exports.terminateWorkers = terminateWorkers;
 
