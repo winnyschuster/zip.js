@@ -33,6 +33,7 @@
 
 ## Interfaces
 
+- [BlobTempStreamOptions](interfaces/BlobTempStreamOptions.md)
 - [Configuration](interfaces/Configuration.md)
 - [DirectoryEntry](interfaces/DirectoryEntry.md)
 - [EntryBitFlag](interfaces/EntryBitFlag.md)
@@ -111,6 +112,8 @@
 ## Functions
 
 - [configure](functions/configure.md)
+- [createBlobTempStream](functions/createBlobTempStream.md)
 - [createOPFSTempStream](functions/createOPFSTempStream.md)
+- [createSyncAccessHandleTempStream](functions/createSyncAccessHandleTempStream.md)
 - [getMimeType](functions/getMimeType.md)
 - [terminateWorkers](functions/terminateWorkers.md)
