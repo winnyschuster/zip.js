@@ -8,7 +8,7 @@
 
 > **getMimeType**(`fileExtension`): `string`
 
-Defined in: [index.d.ts:328](https://github.com/gildas-lormeau/zip.js/blob/430b26aa741652bb730a319c4680f0026111f13d/index.d.ts#L328)
+Defined in: [index.d.ts:328](https://github.com/gildas-lormeau/zip.js/blob/eb0a28ff183842af5fe9289f596749ea384004de/index.d.ts#L328)
 
 Returns the MIME type corresponding to a filename extension.
 
