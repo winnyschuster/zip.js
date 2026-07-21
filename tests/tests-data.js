@@ -112,6 +112,7 @@ export default ([
 	{ title: "Replace entry", script: "./test-replace-entry.js" },
 	{ title: "Safe closing", script: "./test-safe-closing.js" },
 	{ title: "Service worker", script: "./test-sw.js", env: ["browser"] },
+	{ title: "Web worker", script: "./test-web-worker.js", env: ["browser", "deno", "bun"] },
 	{ title: "Signature CRC32", script: "./test-crc.js" },
 	{ title: "Split data", script: "./test-split-data.js" },
 	{ title: "Split zip file", script: "./test-split-zip.js" },
